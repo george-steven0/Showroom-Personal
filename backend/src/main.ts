@@ -1,12 +1,19 @@
 import { NestFactory } from '@nestjs/core'
 import { ConfigService } from '@nestjs/config'
 import { ValidationPipe } from '@nestjs/common'
+import { json } from 'express'
 import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/http-exception.filter'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   const config = app.get(ConfigService)
+
+  // The system logo travels as a base64 data URL embedded in the regular
+  // PATCH /settings JSON body — there is no separate multipart upload
+  // endpoint for it (only the database-restore endpoint uses multipart).
+  // Express's default 100kb JSON limit would reject that body outright.
+  app.use(json({ limit: '10mb' }))
 
   // Every DTO field must be declared and validated — an unexpected field
   // in the body is rejected outright, and primitive strings from JSON are

@@ -12,7 +12,7 @@
     existing service of the same name first.
 
     Deliberately does NOT use port 80 (that's reserved territory on a
-    shared PC — IIS, Skype, other local services). Defaults to port 5000
+    shared PC - IIS, Skype, other local services). Defaults to port 5000
     instead, written into backend\.env so every future restart (a reboot,
     a crash-restart) keeps using it rather than re-picking one. Also adds
     a friendly hostname ("elostaz-showroom.local" by default) to the
@@ -36,12 +36,12 @@
 param(
     # Defaults to nssm.exe sitting next to frontend\/backend\ at the
     # project root (two levels up from this script, which lives at
-    # backend\deploy\) — kept there deliberately, so copying the whole
+    # backend\deploy\) - kept there deliberately, so copying the whole
     # project folder to another PC brings NSSM along with it and this
     # script needs no editing. Pass -NssmPath to point somewhere else.
     [string]$NssmPath = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'nssm.exe'),
     [string]$ServiceName = 'ShowroomManagement',
-    # The port the deployed service listens on — deliberately NOT 80 (see
+    # The port the deployed service listens on - deliberately NOT 80 (see
     # the file-level note) and NOT 3000 (the frontend dev server's own
     # default target, so a dev session and the installed service can run
     # side by side without colliding).
@@ -49,7 +49,7 @@ param(
     # A friendly name added to the Windows hosts file pointing at this PC
     # (http://elostaz-showroom.local:5000 instead of a bare port number).
     # Pass -NoHostName to skip this (an empty -HostName '' does NOT work
-    # here — PowerShell's -File argument passing silently drops
+    # here - PowerShell's -File argument passing silently drops
     # empty-string arguments before this script ever sees them, so a real
     # switch is used instead).
     [string]$HostName = 'elostaz-showroom.local',
@@ -115,7 +115,7 @@ Write-Host ''
 # uninstall-service.ps1 (and re-runs of this script) can find and
 # replace exactly this line later. Re-running with the same -HostName is
 # a no-op; a different one swaps the old marked line for the new one;
-# -NoHostName removes it entirely. Never fatal — if the hosts file can't
+# -NoHostName removes it entirely. Never fatal - if the hosts file can't
 # be written (locked, blocked by antivirus, etc.) the service still
 # installs fine and localhost still works.
 $hostsEntryOk = $false
@@ -123,7 +123,7 @@ $hostsFile = Join-Path $env:WINDIR 'System32\drivers\etc\hosts'
 $marker = "# $ServiceName"
 try {
     # @() forces an array even when Get-Content/Where-Object return a
-    # single line — without it, PowerShell unwraps a one-item result to
+    # single line - without it, PowerShell unwraps a one-item result to
     # a bare string, and "$kept + $currentLine" below would silently do
     # string concatenation (merging two hosts entries onto one corrupt,
     # unparseable line) instead of appending a new array element.
@@ -150,7 +150,7 @@ catch {
 }
 
 # Best-effort cleanup of a previous install (including a partial one
-# left behind by a run that wasn't elevated) — failure here is
+# left behind by a run that wasn't elevated) - failure here is
 # expected and fine; what matters is the fresh install below.
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
@@ -201,7 +201,7 @@ if (Test-Path $envFile) {
     Set-Content -Path $envFile -Value $envLines
 }
 else {
-    Write-Host "backend\.env not found — copy .env.example to .env and fill it in first." -ForegroundColor Red
+    Write-Host "backend\.env not found - copy .env.example to .env and fill it in first." -ForegroundColor Red
     exit 1
 }
 Write-Host "Saved PORT=$Port to backend\.env." -ForegroundColor Green
@@ -219,7 +219,7 @@ Invoke-Nssm set $ServiceName Start SERVICE_AUTO_START | Out-Null
 Invoke-Nssm set $ServiceName AppEnvironmentExtra 'NODE_ENV=production' | Out-Null
 
 # NSSM restarts a crashed process by default (`AppExit Default Restart`
-# is already its default behaviour) — this is the whole reason NSSM was
+# is already its default behaviour) - this is the whole reason NSSM was
 # chosen over Task Scheduler, so it's set explicitly here rather than
 # left implicit.
 Invoke-Nssm set $ServiceName AppExit Default Restart | Out-Null

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { UI_ICONS } from './icons'
 
 export interface BrandProps {
@@ -15,6 +16,7 @@ const SIZES = {
 
 export function Brand({ variant = 'rail', compact = false, size = 'md' }: BrandProps) {
   const { t } = useTranslation()
+  const { settings, displayName } = useSettings()
   const s = SIZES[size]
 
   const nameTone = variant === 'rail' ? 'text-rail-ink' : 'text-ink'
@@ -22,13 +24,13 @@ export function Brand({ variant = 'rail', compact = false, size = 'md' }: BrandP
 
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <div className={`${s.box} flex shrink-0 items-center justify-center rounded-lg bg-primary text-white`}>
-        {UI_ICONS.car}
+      <div className={`${s.box} flex shrink-0 items-center justify-center overflow-hidden rounded-lg ${settings.logo ? 'bg-white' : 'bg-primary'}`}>
+        {settings.logo ? <img src={settings.logo} alt="" className="size-full object-contain" /> : UI_ICONS.car}
       </div>
 
       {!compact && (
         <div className="min-w-0">
-          <p className={`truncate font-semibold ${s.text} ${nameTone}`}>{t('app.defaultName')}</p>
+          <p className={`truncate font-semibold ${s.text} ${nameTone}`}>{displayName || t('app.defaultName')}</p>
           <p className={`truncate ${s.sub} ${subTone}`}>{t('app.tagline')}</p>
         </div>
       )}

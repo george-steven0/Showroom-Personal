@@ -43,6 +43,7 @@ export interface Supplier extends AuditFields {
   id: string
   name: string
   phone: string | null
+  phone2: string | null
   address: string | null
   notes: string | null
 }
@@ -54,7 +55,6 @@ export interface PurchaseBillLine {
   id: string
   purchaseBillId: string
   itemName: string
-  quantity: number
   description: string | null
   supplierId: string
   supplierName: string
@@ -191,4 +191,34 @@ export interface MovementsSummary {
   totalDebit: number
   totalCredit: number
   net: number
+}
+
+export interface SystemSettings {
+  id: string
+  systemName: string
+  systemNameAr: string
+  logo: string | null
+  updatedAt: string | null
+  updatedBy: string | null
+  updatedByName: string | null
+}
+
+export type BackupKind = 'backup' | 'pre-reset' | 'pre-restore'
+
+export interface BackupFileInfo {
+  filename: string
+  kind: BackupKind
+  createdAt: string
+  size: number
+}
+
+export interface BackupResult {
+  success: boolean
+  filename: string
+  createdAt: string
+}
+
+export interface RestoreResult {
+  success: boolean
+  backupFilename: string
 }

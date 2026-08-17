@@ -46,7 +46,7 @@ export function ConfirmModal({
       destroyOnHidden
     >
       {description && <div className="text-sm leading-relaxed text-muted">{description}</div>}
-      {warning && <Alert className="mt-3" type="warning" showIcon message={warning} />}
+      {warning && <Alert className="mt-3" type="warning" showIcon title={warning} />}
     </Modal>
   )
 }

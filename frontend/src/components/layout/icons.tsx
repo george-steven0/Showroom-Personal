@@ -51,6 +51,12 @@ export const NAV_ICONS = {
       <path d="m7 14 3-3 3 3 5-6" />
     </svg>
   ),
+  gear: (
+    <svg {...base} aria-hidden>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2M12 19v2M4.2 7.8l1.7 1M18.1 15.2l1.7 1M3 12h2M19 12h2M4.2 16.2l1.7-1M18.1 8.8l1.7-1" />
+    </svg>
+  ),
 }
 
 export const UI_ICONS = {

@@ -3,7 +3,6 @@ import type { ListQuery, Paginated, PurchaseBill, PurchaseBillLine } from '@/typ
 
 export interface PurchaseLinePayload {
   itemName: string
-  quantity: number
   description?: string
   supplierId: string
   chassisNumber: string

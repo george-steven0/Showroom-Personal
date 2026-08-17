@@ -22,6 +22,7 @@
     "sellingBills": "Selling Bills",
     "accounts": "Accounts",
     "summary": "Summary",
+    "settings": "Settings",
     "collapse": "Collapse sidebar",
     "expand": "Open menu"
   },
@@ -48,7 +49,6 @@
     "all": "All",
     "confirmDelete": "Delete",
     "createdBy": "Created by",
-    "quantity": "Quantity",
     "price": "Price",
     "amount": "Amount",
     "description": "Description",
@@ -59,7 +59,8 @@
     "close": "Close",
     "back": "Back",
     "required": "Required",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "remove": "Remove"
   },
   "validation": {
     "usernameRequired": "Username is required",
@@ -67,7 +68,6 @@
     "nameRequired": "Name is required",
     "phoneInvalid": "Enter a valid phone number",
     "itemRequired": "Item name is required",
-    "quantityPositive": "Quantity must be greater than 0",
     "supplierRequired": "Supplier is required",
     "chassisRequired": "Chassis number is required",
     "motorRequired": "Motor number is required",
@@ -78,7 +78,8 @@
     "paidExceedsPrice": "Paid amount cannot exceed the price",
     "atLeastOneLine": "Add at least one item",
     "required": "This field is required",
-    "exceedsOwed": "Cannot exceed the remaining owed amount ({{amount}})"
+    "exceedsOwed": "Cannot exceed the remaining owed amount ({{amount}})",
+    "systemNameRequired": "System name is required"
   },
   "messages": {
     "saveFailed": "Could not save. Please try again.",
@@ -95,7 +96,8 @@
     "expenseUpdated": "Expense updated",
     "expenseDeleted": "Expense deleted",
     "capitalAdded": "Capital added",
-    "paymentRecorded": "Payment recorded"
+    "paymentRecorded": "Payment recorded",
+    "settingsSaved": "Settings saved"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -103,6 +105,7 @@
     "add": "Add supplier",
     "addTitle": "Add supplier",
     "editTitle": "Edit supplier",
+    "phone2": "Phone 2",
     "deleteTitle": "Delete supplier?",
     "deleteBody": "This will permanently delete \"{{name}}\". Suppliers linked to buying bills cannot be deleted.",
     "empty": "No suppliers yet",
@@ -116,7 +119,6 @@
     "number": "Bill number",
     "date": "Purchase date",
     "itemName": "Item name",
-    "quantity": "Qty",
     "description": "Description",
     "supplier": "Supplier",
     "price": "Price",
@@ -267,5 +269,52 @@
     "cancelled": "Cancelled",
     "in_stock": "In stock",
     "sold": "Sold"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "System branding, database backups and restore.",
+    "branding": "Branding",
+    "systemName": "System name",
+    "systemNameAr": "System name (Arabic)",
+    "logo": "Logo",
+    "noLogo": "No logo",
+    "uploadLogo": "Upload logo",
+    "changeLogo": "Change logo",
+    "logoInvalidType": "Please choose an image file.",
+    "logoTooLarge": "That image is too large (max 5 MB).",
+    "backups": "Backups",
+    "backupsHint": "Every backup — manual and automatic — is saved in backend/backups.",
+    "createBackup": "Create backup now",
+    "backupCreated": "Backup created",
+    "emptyBackups": "No backups yet.",
+    "backupFile": "File",
+    "backupKind": "Kind",
+    "backupSize": "Size",
+    "download": "Download",
+    "restoreThis": "Restore this",
+    "kind_backup": "Manual",
+    "kind_pre-reset": "Before reset",
+    "kind_pre-restore": "Before restore",
+    "dangerZone": "Danger zone",
+    "resetTitle": "Reset database",
+    "resetHint": "Permanently deletes every supplier, buying bill, selling bill and expense. Your login and these settings are kept.",
+    "resetBody": "This permanently deletes every supplier, buying bill, selling bill and expense. Your login and these settings are kept. A safety backup of the current database is taken automatically first.",
+    "resetSafetyNote": "A safety backup is saved to backend/backups before anything is deleted, so this can be undone by restoring it.",
+    "resetDatabase": "Reset database",
+    "resetConfirm": "Reset database",
+    "resetSuccess": "Database reset",
+    "typeToConfirm": "Type \"{{phrase}}\" to confirm",
+    "restoreTitle": "Restore from file",
+    "restoreFromFile": "Restore from file",
+    "restoreFromFileHint": "Replace the live database with a .db backup file from your computer.",
+    "restoreBody": "This replaces everything in the live database with the contents of the file you pick. A safety backup of the current database is taken automatically first.",
+    "restoreSafetyNote": "A safety backup of the current database is saved to backend/backups before the swap, so this can be undone by restoring it.",
+    "restoreConfirm": "Restore",
+    "restoreDropHint": "Click or drag a .db backup file here",
+    "restoreFileHint": "Only .db files created by this system are accepted.",
+    "restoreSuccess": "Database restored",
+    "restoreThisTitle": "Restore this backup?",
+    "restoreThisBody": "This replaces everything in the live database with the contents of \"{{filename}}\".",
+    "safetyBackupSaved": "The previous database was saved as {{filename}} in backend/backups."
   }
 }

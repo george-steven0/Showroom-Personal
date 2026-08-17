@@ -116,7 +116,7 @@ export function LoginPage() {
             <h1 className="text-2xl font-semibold text-ink">{t('auth.welcomeBack')}</h1>
             <p className="mt-1.5 text-sm text-muted">{t('auth.loginSubtitle')}</p>
 
-            {error && <Alert className="mt-5" type="error" showIcon message={errorMessage(error, t('auth.invalidCredentials'))} />}
+            {error && <Alert className="mt-5" type="error" showIcon title={errorMessage(error, t('auth.invalidCredentials'))} />}
 
             <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
               <TextField control={form.control} name="username" label={t('auth.username')} required autoFocus placeholder="admin" />

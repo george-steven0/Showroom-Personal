@@ -14,6 +14,7 @@ import { AccountsModule } from './accounts/accounts.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { ReportsModule } from './reports/reports.module'
 import { LedgerModule } from './ledger/ledger.module'
+import { SettingsModule } from './settings/settings.module'
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { LedgerModule } from './ledger/ledger.module'
     }),
     PrismaModule,
     LedgerModule,
+    SettingsModule,
     HealthModule,
     AuthModule,
     SuppliersModule,

@@ -1,9 +1,11 @@
 /**
- * First-run bootstrap: the one account needed to log in at all. Nothing
- * else — no demo suppliers or bills. Safe to re-run: the write is an
- * upsert with `update: {}`, so `prisma migrate reset` (which re-seeds
- * automatically) never overwrites an admin whose password was already
- * changed post-install.
+ * First-run bootstrap: the one account needed to log in at all, and the
+ * settings singleton so the app has real branding to render from the
+ * first request. Nothing else — no demo suppliers or bills. Safe to
+ * re-run: every write here is an upsert with `update: {}`, so
+ * `prisma migrate reset` (which re-seeds automatically) never overwrites
+ * an admin whose password was already changed post-install, or a system
+ * name/logo an admin already set from Settings.
  */
 import { PrismaClient } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
@@ -30,8 +32,19 @@ async function main() {
     },
   })
 
+  await prisma.systemSettings.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      systemName: 'Showroom',
+      systemNameAr: 'المعرض',
+      logo: null,
+    },
+  })
+
   // eslint-disable-next-line no-console
-  console.log(`Seeded admin user "${adminUsername}".`)
+  console.log(`Seeded admin user "${adminUsername}" and system settings.`)
 }
 
 main()

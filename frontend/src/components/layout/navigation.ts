@@ -13,6 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: 'sales', path: '/selling-bills', labelKey: 'nav.sellingBills', icon: 'invoice' },
   { key: 'accounts', path: '/accounts', labelKey: 'nav.accounts', icon: 'wallet' },
   { key: 'summary', path: '/summary', labelKey: 'nav.summary', icon: 'chart' },
+  { key: 'settings', path: '/settings', labelKey: 'nav.settings', icon: 'gear' },
 ]
 
 /** Page titles for the header breadcrumb, keyed by route prefix. */
@@ -23,4 +24,5 @@ export const ROUTE_TITLES: { prefix: string; labelKey: string }[] = [
   { prefix: '/selling-bills', labelKey: 'nav.sellingBills' },
   { prefix: '/accounts', labelKey: 'nav.accounts' },
   { prefix: '/summary', labelKey: 'nav.summary' },
+  { prefix: '/settings', labelKey: 'nav.settings' },
 ]

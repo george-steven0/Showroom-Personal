@@ -39,7 +39,6 @@ export function PurchaseLineRow({
       <FormRow cols={3}>
         <TextField control={control} name={`lines.${index}.itemName`} label={t('purchases.itemName')} required placeholder="BMW X5 2020" />
         <SelectField control={control} name={`lines.${index}.supplierId`} label={t('purchases.supplier')} required options={supplierOptions} />
-        <NumberField control={control} name={`lines.${index}.quantity`} label={t('purchases.quantity')} min={1} grouping={false} />
         <TextField control={control} name={`lines.${index}.chassisNumber`} label={t('purchases.chassisNumber')} required />
         <TextField control={control} name={`lines.${index}.motorNumber`} label={t('purchases.motorNumber')} required />
         <NumberField

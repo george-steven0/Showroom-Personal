@@ -5,7 +5,7 @@
 
   .DESCRIPTION
     Run this ONCE, from an elevated ("Run as Administrator") PowerShell
-    window — a task that runs whether anyone is logged in or not needs
+    window - a task that runs whether anyone is logged in or not needs
     Administrator rights to register, same reason install-service.ps1
     does. Safe to re-run: it replaces any existing task of the same
     name first.
@@ -36,7 +36,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 }
 
 # Accepts both zero-padded ('03:00') and plain ('3:00') hours. The
-# [string[]] cast on the formats array is required — PowerShell's own
+# [string[]] cast on the formats array is required - PowerShell's own
 # array literal doesn't reliably bind to this overload without it, and
 # silently returns false (not an error) when it doesn't.
 $parsedTime = [datetime]::MinValue
@@ -56,7 +56,7 @@ if (-not $node) {
     exit 1
 }
 
-# Not "Get-Command npm" — that typically resolves to npm.ps1, a
+# Not "Get-Command npm" - that typically resolves to npm.ps1, a
 # PowerShell script Task Scheduler's launcher cannot directly execute.
 # npm.cmd sits next to node.exe in every normal Node.js install.
 $npmCmd = Join-Path (Split-Path -Parent $node) 'npm.cmd'
@@ -83,7 +83,7 @@ Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Silent
 
 $action = New-ScheduledTaskAction -Execute $npmCmd -Argument 'run backup' -WorkingDirectory $backend
 $trigger = New-ScheduledTaskTrigger -Daily -At $Time
-# ServiceAccount + SYSTEM: no password to supply, expire, or rotate —
+# ServiceAccount + SYSTEM: no password to supply, expire, or rotate -
 # same account NSSM runs the web service as by default.
 $taskPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 15)

@@ -79,7 +79,6 @@ export class PurchaseBillsService {
           lines: {
             create: dto.lines.map((line) => ({
               itemName: line.itemName,
-              quantity: line.quantity,
               description: line.description,
               supplierId: line.supplierId,
               chassisNumber: line.chassisNumber,
@@ -147,7 +146,6 @@ export class PurchaseBillsService {
           lines: {
             create: dto.lines.map((line) => ({
               itemName: line.itemName,
-              quantity: line.quantity,
               description: line.description,
               supplierId: line.supplierId,
               chassisNumber: line.chassisNumber,
@@ -269,7 +267,6 @@ export class PurchaseBillsService {
       id: line.id,
       purchaseBillId: line.purchaseBillId,
       itemName: line.itemName,
-      quantity: line.quantity,
       description: line.description,
       supplierId: line.supplierId,
       supplierName: supplier.name,

@@ -26,6 +26,7 @@ const routes: RouteObject[] = [
           { path: 'selling-bills/new', lazy: page(() => import('@/features/sales/SellingBillFormPage')) },
           { path: 'accounts', lazy: page(() => import('@/features/accounts/AccountsPage')) },
           { path: 'summary', lazy: page(() => import('@/features/summary/SummaryPage')) },
+          { path: 'settings', lazy: page(() => import('@/features/settings/SettingsPage')) },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

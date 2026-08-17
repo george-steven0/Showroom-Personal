@@ -2,7 +2,7 @@
   .SYNOPSIS
     Removes the daily backup Scheduled Task installed by
     install-backup-task.ps1. Run as Administrator. Does not touch the
-    database or any files already inside backend\backups — only the
+    database or any files already inside backend\backups - only the
     task registration itself.
 #>
 param(

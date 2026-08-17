@@ -39,6 +39,12 @@ export default function SuppliersPage() {
   const columns: ColumnsType<Supplier> = [
     { title: t('common.name'), dataIndex: 'name', sorter: true, render: (value: string) => <span className="font-medium text-ink">{value}</span> },
     { title: t('common.phone'), dataIndex: 'phone', render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
+    {
+      title: t('suppliers.phone2'),
+      dataIndex: 'phone2',
+      responsive: ['lg'],
+      render: (value: string | null) => value ?? <span className="text-subtle">—</span>,
+    },
     { title: t('common.address'), dataIndex: 'address', ellipsis: true, render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
     {
       title: t('common.actions'),

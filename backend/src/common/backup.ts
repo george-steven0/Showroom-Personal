@@ -2,7 +2,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 const KEEP = 30
-const FILE_PREFIX = 'backup-'
+
+export type BackupKind = 'backup' | 'pre-reset' | 'pre-restore'
 
 export interface BackupResult {
   path: string
@@ -12,15 +13,22 @@ export interface BackupResult {
 }
 
 /**
- * WAL-checkpoint-then-copy-then-prune, the one routine `npm run backup`
- * (scripts/backup.ts) and any future in-app backup button would both
- * call. `prisma` only needs `$queryRawUnsafe`.
+ * WAL-checkpoint-then-copy-then-prune — the one routine every backup in
+ * this app goes through: the manual "Create backup" button, `npm run
+ * backup` (scripts/backup.ts), and the automatic safety copy taken right
+ * before a database reset or restore (see settings.service.ts). `kind`
+ * becomes the filename prefix, so a listing can tell them apart at a
+ * glance; only plain `backup-*` files are pruned to the most recent 30 —
+ * a pre-reset/pre-restore safety copy is a rare, deliberate event worth
+ * keeping indefinitely rather than silently rotated away. `prisma` only
+ * needs `$queryRawUnsafe`.
  */
 export async function performBackup(
   prisma: { $queryRawUnsafe: (query: string) => Promise<unknown> },
   backendRoot: string,
   databaseUrl: string | undefined,
   backupDirEnv: string | undefined,
+  kind: BackupKind = 'backup',
 ): Promise<BackupResult> {
   if (!databaseUrl?.startsWith('file:')) {
     throw new Error('DATABASE_URL must be a file: URL for backups to work')
@@ -44,18 +52,29 @@ export async function performBackup(
   fs.mkdirSync(backupDir, { recursive: true })
 
   const createdAt = new Date()
-  const filename = `${FILE_PREFIX}${createdAt.toISOString().replace(/[:.]/g, '-')}.db`
+  const filename = `${kind}-${createdAt.toISOString().replace(/[:.]/g, '-')}.db`
   const backupPath = path.join(backupDir, filename)
   fs.copyFileSync(dbPath, backupPath)
 
-  // Roughly a month of daily runs — prune older ones so an unattended
-  // machine's disk usage doesn't grow unbounded.
-  const existing = fs
-    .readdirSync(backupDir)
-    .filter((f) => f.startsWith(FILE_PREFIX) && f.endsWith('.db'))
-    .sort()
-  const toDelete = existing.slice(0, Math.max(0, existing.length - KEEP))
-  for (const file of toDelete) fs.unlinkSync(path.join(backupDir, file))
+  let prunedCount = 0
+  if (kind === 'backup') {
+    // Roughly a month of daily runs — prune older ones so an unattended
+    // machine's disk usage doesn't grow unbounded.
+    const existing = fs
+      .readdirSync(backupDir)
+      .filter((f) => f.startsWith('backup-') && f.endsWith('.db'))
+      .sort()
+    const toDelete = existing.slice(0, Math.max(0, existing.length - KEEP))
+    for (const file of toDelete) fs.unlinkSync(path.join(backupDir, file))
+    prunedCount = toDelete.length
+  }
 
-  return { path: backupPath, filename, createdAt, prunedCount: toDelete.length }
+  return { path: backupPath, filename, createdAt, prunedCount }
+}
+
+export function resolveDatabasePath(backendRoot: string, databaseUrl: string | undefined): string {
+  if (!databaseUrl?.startsWith('file:')) {
+    throw new Error('DATABASE_URL must be a file: URL for this to work')
+  }
+  return path.resolve(backendRoot, 'prisma', databaseUrl.slice('file:'.length))
 }

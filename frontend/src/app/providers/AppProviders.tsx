@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { router } from '@/app/router'
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
@@ -10,6 +11,7 @@ import enUS from 'antd/locale/en_US'
 import { persistor, store } from '@/app/store'
 import { useAppSelector } from '@/app/hooks'
 import { applyLanguage, directionOf } from '@/i18n/i18nConfig'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { buildTheme } from './antdTheme'
 import { DarkModeContext } from './ThemeContext'
 
@@ -64,6 +66,42 @@ function ThemeBridge({ children }: { children: ReactNode }) {
   )
 }
 
+/** Keeps the browser tab named after the configured system — reachable pre-auth since GET /settings is public. */
+function DocumentTitle() {
+  const { displayName } = useSettings()
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    document.title = displayName || t('app.defaultName')
+  }, [displayName, t])
+
+  return null
+}
+
+/** Keeps the tab's favicon matched to the logo configured in Settings, falling back to the bundled default when none is set. */
+function DocumentFavicon() {
+  const { settings } = useSettings()
+
+  useEffect(() => {
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+
+    if (settings.logo) {
+      link.type = /^data:([^;]+);/.exec(settings.logo)?.[1] ?? ''
+      link.href = settings.logo
+    } else {
+      link.type = 'image/svg+xml'
+      link.href = '/favicon.svg'
+    }
+  }, [settings.logo])
+
+  return null
+}
+
 export function AppProviders() {
   return (
     <Provider store={store}>
@@ -71,6 +109,8 @@ export function AppProviders() {
         {/* `layer` puts antd's styles in the `antd` cascade layer, which index.css orders below Tailwind's. */}
         <StyleProvider layer>
           <ThemeBridge>
+            <DocumentTitle />
+            <DocumentFavicon />
             <RouterProvider router={router} />
           </ThemeBridge>
         </StyleProvider>

@@ -77,7 +77,7 @@ export default function SummaryPage() {
           searchPlaceholder={`${t('summary.item')} · ${t('summary.counterparty')}`}
           showSearch={false}
           actions={
-            <Button icon={ACTION_ICONS.print} onClick={handleExport}>
+            <Button icon={ACTION_ICONS.download} onClick={handleExport}>
               {t('common.export')}
             </Button>
           }

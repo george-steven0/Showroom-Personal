@@ -19,7 +19,7 @@ export function SupplierModal({ open, supplier, onClose }: { open: boolean; supp
   const schema = useMemo(() => supplierSchema(t), [t])
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', phone: '', address: '', notes: '' },
+    defaultValues: { name: '', phone: '', phone2: '', address: '', notes: '' },
   })
 
   useEffect(() => {
@@ -27,6 +27,7 @@ export function SupplierModal({ open, supplier, onClose }: { open: boolean; supp
     form.reset({
       name: supplier?.name ?? '',
       phone: supplier?.phone ?? '',
+      phone2: supplier?.phone2 ?? '',
       address: supplier?.address ?? '',
       notes: supplier?.notes ?? '',
     })
@@ -64,6 +65,7 @@ export function SupplierModal({ open, supplier, onClose }: { open: boolean; supp
         <FormRow cols={1}>
           <TextField control={form.control} name="name" label={t('common.name')} required autoFocus />
           <TextField control={form.control} name="phone" label={t('common.phone')} />
+          <TextField control={form.control} name="phone2" label={t('suppliers.phone2')} />
           <TextField control={form.control} name="address" label={t('common.address')} />
           <TextAreaField control={form.control} name="notes" label={t('common.notes')} rows={2} />
         </FormRow>

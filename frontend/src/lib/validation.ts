@@ -19,6 +19,11 @@ export function supplierSchema(t: TFunction) {
       .trim()
       .optional()
       .refine((value) => !value || PHONE_RE.test(value), t('validation.phoneInvalid')),
+    phone2: z
+      .string()
+      .trim()
+      .optional()
+      .refine((value) => !value || PHONE_RE.test(value), t('validation.phoneInvalid')),
     address: z.string().trim().optional(),
     notes: z.string().trim().optional(),
   })
@@ -29,7 +34,6 @@ export function purchaseLineSchema(t: TFunction) {
     .object({
       key: z.string(),
       itemName: z.string().trim().min(2, t('validation.itemRequired')),
-      quantity: z.number({ message: t('validation.quantityPositive') }).positive(t('validation.quantityPositive')),
       description: z.string().trim().optional(),
       supplierId: z.string().min(1, t('validation.supplierRequired')),
       chassisNumber: z.string().trim().min(1, t('validation.chassisRequired')),
@@ -103,6 +107,14 @@ export function recordPaymentSchema(t: TFunction, maxAmount: number, formattedMa
   })
 }
 
+export function settingsSchema(t: TFunction) {
+  return z.object({
+    systemName: z.string().trim().min(2, t('validation.systemNameRequired')),
+    systemNameAr: z.string().trim().optional(),
+    logo: z.string().nullable(),
+  })
+}
+
 export type LoginFormValues = z.infer<ReturnType<typeof loginSchema>>
 export type SupplierFormValues = z.infer<ReturnType<typeof supplierSchema>>
 export type PurchaseLineFormValues = z.infer<ReturnType<typeof purchaseLineSchema>>
@@ -111,3 +123,4 @@ export type SellingBillFormValues = z.infer<ReturnType<typeof sellingBillSchema>
 export type ExpenseFormValues = z.infer<ReturnType<typeof expenseSchema>>
 export type CapitalInjectionFormValues = z.infer<ReturnType<typeof capitalInjectionSchema>>
 export type RecordPaymentFormValues = z.infer<ReturnType<typeof recordPaymentSchema>>
+export type SettingsFormValues = z.infer<ReturnType<typeof settingsSchema>>

@@ -12,6 +12,8 @@ export const TAGS = [
   'CashTransaction',
   'Accounts',
   'Dashboard',
+  'Settings',
+  'Backups',
 ] as const
 
 const rawBaseQuery = fetchBaseQuery({

@@ -40,6 +40,7 @@ model Supplier {
   id      String  @id @default(cuid())
   name    String
   phone   String?
+  phone2  String?
   address String?
   notes   String?
 
@@ -105,7 +106,6 @@ model PurchaseBillLine {
   purchaseBill   PurchaseBill @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
 
   itemName    String
-  quantity    Float   @default(1)
   description String?
 
   supplierId String
@@ -234,4 +234,23 @@ model CashTransaction {
   @@index([referenceId])
   @@index([type])
   @@map("cash_transactions")
+}
+
+/// Singleton row (`id` is hardcoded to `"singleton"`, enforced only at the
+/// service layer — nothing in the schema stops a second row, but nothing
+/// ever inserts one). Branding shown on the login screen and around the
+/// app; deliberately just name + logo, since this app has no invoicing/
+/// tax/currency configuration to carry the way the sibling project's
+/// settings model does.
+model SystemSettings {
+  id           String  @id @default("singleton")
+  systemName   String
+  systemNameAr String
+  logo         String?
+
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@map("system_settings")
 }

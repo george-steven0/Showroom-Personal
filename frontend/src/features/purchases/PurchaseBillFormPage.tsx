@@ -19,7 +19,6 @@ import { PurchaseLineRow } from './PurchaseLineRow'
 const EMPTY_LINE: PurchaseBillFormValues['lines'][number] = {
   key: '',
   itemName: '',
-  quantity: 1,
   description: '',
   supplierId: '',
   chassisNumber: '',
@@ -62,7 +61,6 @@ export default function PurchaseBillFormPage() {
       lines: existing.lines.map((line) => ({
         key: localId(),
         itemName: line.itemName,
-        quantity: line.quantity,
         description: line.description ?? '',
         supplierId: line.supplierId,
         chassisNumber: line.chassisNumber,
@@ -87,7 +85,6 @@ export default function PurchaseBillFormPage() {
         notes: values.notes || undefined,
         lines: values.lines.map((line) => ({
           itemName: line.itemName,
-          quantity: line.quantity,
           description: line.description || undefined,
           supplierId: line.supplierId,
           chassisNumber: line.chassisNumber,
@@ -177,7 +174,7 @@ export default function PurchaseBillFormPage() {
             </div>
           )}
 
-          {typeof lineErrors?.message === 'string' && <Alert type="error" showIcon message={lineErrors.message} className="mt-3" />}
+          {typeof lineErrors?.message === 'string' && <Alert type="error" showIcon title={lineErrors.message} className="mt-3" />}
         </SectionCard>
 
         <div className="grid gap-4 lg:grid-cols-3">

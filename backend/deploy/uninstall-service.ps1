@@ -2,28 +2,28 @@
   .SYNOPSIS
     Removes the ShowroomManagement Windows service installed by
     install-service.ps1. Run as Administrator. Does not touch the
-    database, backups, or any application files — only the service
+    database, backups, or any application files - only the service
     registration itself (and the hosts file entry install-service.ps1
     added, if any).
 #>
 param(
-  # Defaults to nssm.exe at the project root — see install-service.ps1's
+  # Defaults to nssm.exe at the project root - see install-service.ps1's
   # matching comment for why.
   [string]$NssmPath = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) 'nssm.exe'),
   # Must match whatever -ServiceName install-service.ps1 was run with.
   [string]$ServiceName = 'ShowroomManagement',
   # Removal below is marker-based, not name-based, so this doesn't need
-  # to match whatever name was actually in use — it only controls
+  # to match whatever name was actually in use - it only controls
   # whether the hosts file cleanup runs at all. Pass -NoHostName to
   # leave the hosts file untouched (an empty -HostName '' does NOT
-  # work here — see install-service.ps1's matching comment for why).
+  # work here - see install-service.ps1's matching comment for why).
   [string]$HostName = 'elostaz-showroom.local',
   [switch]$NoHostName
 )
 
 if ($NoHostName) { $HostName = '' }
 
-# Deliberately NOT 'Stop' — see install-service.ps1's comment on the
+# Deliberately NOT 'Stop' - see install-service.ps1's comment on the
 # same line: nssm.exe's routine stderr chatter would otherwise abort
 # this script under PowerShell 5.1's native-command error handling.
 $ErrorActionPreference = 'Continue'

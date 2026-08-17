@@ -8,11 +8,6 @@ export class PurchaseLineInputDto {
   @IsNotEmpty({ message: 'Item name is required' })
   itemName!: string
 
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0.01, { message: 'Quantity must be greater than 0' })
-  quantity!: number
-
   @IsOptional()
   @IsString()
   description?: string
