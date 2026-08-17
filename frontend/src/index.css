@@ -1,0 +1,348 @@
+/**
+ * Cascade order — this line must stay first, and the position of `antd`
+ * in it is the whole point.
+ *
+ * antd v6 injects its CSS-in-JS through `<StyleProvider layer>` into an
+ * `antd` layer. Slotting it *between* Tailwind's reset and its utilities
+ * is what makes both halves work:
+ *
+ *   base   < antd  → antd's own typography, spacing and table styles
+ *                    survive Tailwind's preflight reset.
+ *   antd   < utils → utility classes like `hidden` still beat antd,
+ *                    which unlayered antd styles would otherwise ignore.
+ */
+@layer theme, base, antd, components, utilities;
+
+@import 'tailwindcss';
+
+/* Dark mode is driven by a class on <html>, toggled by the UI slice. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ *
+ * Semantic design tokens
+ * ------------------------------------------------------------------ */
+@theme inline {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Cairo', Roboto, Arial, sans-serif;
+  --font-arabic: 'Cairo', 'Segoe UI', system-ui, Tahoma, Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  --color-canvas: var(--sr-canvas);
+  --color-surface: var(--sr-surface);
+  --color-surface-2: var(--sr-surface-2);
+  --color-surface-3: var(--sr-surface-3);
+  --color-line: var(--sr-line);
+  --color-line-strong: var(--sr-line-strong);
+
+  --color-ink: var(--sr-ink);
+  --color-muted: var(--sr-muted);
+  --color-subtle: var(--sr-subtle);
+  --color-inverse: var(--sr-inverse);
+
+  --color-primary: var(--sr-primary);
+  --color-primary-hover: var(--sr-primary-hover);
+  --color-primary-soft: var(--sr-primary-soft);
+  --color-primary-ink: var(--sr-primary-ink);
+
+  --color-success: var(--sr-success);
+  --color-success-soft: var(--sr-success-soft);
+  --color-warning: var(--sr-warning);
+  --color-warning-soft: var(--sr-warning-soft);
+  --color-danger: var(--sr-danger);
+  --color-danger-soft: var(--sr-danger-soft);
+  --color-info: var(--sr-info);
+  --color-info-soft: var(--sr-info-soft);
+  --color-neutral: var(--sr-neutral);
+  --color-neutral-soft: var(--sr-neutral-soft);
+  --color-accent: var(--sr-accent);
+  --color-accent-soft: var(--sr-accent-soft);
+
+  --color-rail: var(--sr-rail);
+  --color-rail-2: var(--sr-rail-2);
+  --color-rail-ink: var(--sr-rail-ink);
+  --color-rail-muted: var(--sr-rail-muted);
+  --color-rail-line: var(--sr-rail-line);
+  --color-rail-active: var(--sr-rail-active);
+
+  --radius-card: 0.75rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 6px -2px rgb(16 24 40 / 0.05);
+  --shadow-pop: 0 12px 32px -8px rgb(16 24 40 / 0.18);
+}
+
+:root {
+  --sr-canvas: #f3f6f5;
+  --sr-surface: #ffffff;
+  --sr-surface-2: #f7faf9;
+  --sr-surface-3: #eef4f2;
+  --sr-line: #e1e9e6;
+  --sr-line-strong: #cbd8d3;
+
+  --sr-ink: #10201b;
+  --sr-muted: #566864;
+  --sr-subtle: #869a95;
+  --sr-inverse: #ffffff;
+
+  --sr-primary: #0f8a5f;
+  --sr-primary-hover: #0c7350;
+  --sr-primary-soft: #e4f5ee;
+  --sr-primary-ink: #0c7350;
+
+  --sr-success: #0e9f6e;
+  --sr-success-soft: #e2f5ec;
+  --sr-warning: #b45309;
+  --sr-warning-soft: #fdf1e0;
+  --sr-danger: #d32f2f;
+  --sr-danger-soft: #fdecec;
+  --sr-info: #0e7490;
+  --sr-info-soft: #e1f3f8;
+  --sr-neutral: #64748b;
+  --sr-neutral-soft: #eef1f5;
+  --sr-accent: #b8860b;
+  --sr-accent-soft: #faf1de;
+
+  --sr-rail: #0c1a16;
+  --sr-rail-2: #12241f;
+  --sr-rail-ink: #eef7f3;
+  --sr-rail-muted: #8fa89f;
+  --sr-rail-line: #1c3129;
+  --sr-rail-active: #16a374;
+
+  color-scheme: light;
+}
+
+.dark {
+  --sr-canvas: #08110e;
+  --sr-surface: #101c18;
+  --sr-surface-2: #14221d;
+  --sr-surface-3: #1a2b25;
+  --sr-line: #223a32;
+  --sr-line-strong: #2f4d43;
+
+  --sr-ink: #e7f3ee;
+  --sr-muted: #93aba2;
+  --sr-subtle: #6c8a80;
+  --sr-inverse: #08110e;
+
+  --sr-primary: #2fd694;
+  --sr-primary-hover: #55e0a8;
+  --sr-primary-soft: #123526;
+  --sr-primary-ink: #7fe8bb;
+
+  --sr-success: #31c48d;
+  --sr-success-soft: #10281f;
+  --sr-warning: #f0a83a;
+  --sr-warning-soft: #2c2010;
+  --sr-danger: #f87171;
+  --sr-danger-soft: #341a1c;
+  --sr-info: #38bdf8;
+  --sr-info-soft: #0c2733;
+  --sr-neutral: #94a3b8;
+  --sr-neutral-soft: #1d2836;
+  --sr-accent: #e0b94b;
+  --sr-accent-soft: #322815;
+
+  --sr-rail: #060d0b;
+  --sr-rail-2: #0c1713;
+  --sr-rail-ink: #e7f3ee;
+  --sr-rail-muted: #75948a;
+  --sr-rail-line: #16261f;
+  --sr-rail-active: #2fd694;
+
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------------ *
+ * Base
+ * ------------------------------------------------------------------ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--sr-canvas);
+  color: var(--sr-ink);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Cairo', Roboto, Arial, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum' 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html[dir='rtl'] body {
+  font-family: 'Cairo', 'Segoe UI', system-ui, Tahoma, Arial, sans-serif;
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+html[dir='rtl'] .animate-\[loading-bar_1s_ease-in-out_infinite\] {
+  animation-direction: reverse;
+}
+
+/* Tabular figures for every money / quantity cell. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+::selection {
+  background: var(--sr-primary-soft);
+  color: var(--sr-primary-ink);
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sr-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--sr-line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sr-subtle);
+  background-clip: content-box;
+}
+
+/**
+ * Tailwind v4's preflight sets `cursor: default` on buttons, which makes
+ * every control in the app feel inert. Restore the pointer on things that
+ * are actually clickable — and make disabled state read as blocked.
+ */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+a[href],
+label[for],
+summary,
+.ant-select:not(.ant-select-disabled) .ant-select-selector,
+.ant-picker:not(.ant-picker-disabled),
+.ant-switch:not(.ant-switch-disabled),
+.ant-checkbox-wrapper:not(.ant-checkbox-wrapper-disabled),
+.ant-radio-wrapper:not(.ant-radio-wrapper-disabled),
+.ant-segmented-item:not(.ant-segmented-item-disabled),
+.ant-tabs-tab,
+.ant-pagination-item,
+.ant-pagination-item-link,
+.ant-select-item-option,
+.ant-dropdown-menu-item,
+.ant-table-column-has-sorters,
+.ant-table-row-expand-icon,
+.ant-modal-close,
+.ant-drawer-close {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'],
+.ant-btn-disabled,
+.ant-select-disabled .ant-select-selector,
+.ant-picker-disabled {
+  cursor: not-allowed;
+}
+
+/* Text entry keeps a caret, even inside a clickable wrapper. */
+input:not([type='checkbox']):not([type='radio']),
+textarea,
+.ant-select-selection-search-input {
+  cursor: auto;
+}
+
+/* Keyboard focus stays visible everywhere. */
+:focus-visible {
+  outline: 2px solid var(--sr-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ant Design bridges
+ * ------------------------------------------------------------------ */
+.ant-table-wrapper .ant-table-thead > tr > th {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--sr-muted);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  transition: background-color 0.12s ease;
+}
+
+.row-danger > td {
+  background-color: var(--sr-danger-soft) !important;
+}
+.row-warning > td {
+  background-color: var(--sr-warning-soft) !important;
+}
+
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-dropdown {
+  box-shadow: var(--shadow-pop) !important;
+}
+
+.ant-tabs-top > .ant-tabs-nav::before {
+  border-color: var(--sr-line);
+}
+
+/* ------------------------------------------------------------------ *
+ * Print — A4 documents (buying / selling bills)
+ * ------------------------------------------------------------------ */
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    height: auto;
+  }
+
+  .no-print,
+  .ant-layout-sider,
+  .ant-modal-mask,
+  .ant-message,
+  .ant-notification {
+    display: none !important;
+  }
+
+  .print-root {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .print-page {
+    page-break-after: always;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 12mm 10mm;
+}

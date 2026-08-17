@@ -1,0 +1,237 @@
+// Car Showroom — database schema.
+//
+// SQLite via Prisma, same conventions as this owner's other Nest+Prisma
+// project: no `enum` blocks (SQLite has no enum type — every status/type
+// field is a plain String, validated at the DTO layer with
+// class-validator's `@IsIn([...])`), no `Decimal` (also unsupported on
+// SQLite — every money/quantity field is `Float`), and `cuid()` ids
+// instead of autoincrement integers (a sequential id would leak how many
+// bills have ever been written).
+//
+// One design note specific to this app: every cash-affecting action
+// (a purchase payment, a debt settlement, a sale, an expense, a capital
+// injection) writes exactly one `CashTransaction` row in the same
+// transaction as its own write. That table is the single source of truth
+// for both the running capital balance (accounts.service sums it) and the
+// Summary page's movement journal — nothing duplicates it.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// The one fixed admin account — no roles/permissions system, this is a
+/// single-owner personal tool.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Supplier {
+  id      String  @id @default(cuid())
+  name    String
+  phone   String?
+  address String?
+  notes   String?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  lines PurchaseBillLine[]
+
+  @@map("suppliers")
+}
+
+/// status: 'active' | 'cancelled'
+///
+/// Cancelling, not deleting, is how a buying bill is undone — the row and
+/// its lines stay for the audit trail, and its cash-transaction rows are
+/// reversed with offsetting credits rather than deleted. Only possible
+/// while every one of its lines is still `in_stock` (see the service
+/// layer) — a car that has already been sold can't have its purchase
+/// unwound.
+model PurchaseBill {
+  id     String   @id @default(cuid())
+  number String   @unique
+  date   DateTime
+  notes  String?
+
+  subtotal Float
+  total    Float
+
+  status          String    @default("active")
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelledByName String?
+  cancelReason    String?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  lines PurchaseBillLine[]
+
+  @@map("purchase_bills")
+}
+
+/// One car. `status` tracks whether it has been sold yet — 'in_stock'
+/// lines are what the selling-bill form offers to pick from.
+///
+/// `paidAmount` is entered by hand at bill time (can be less than
+/// `price` if the owner did not have the full amount) and can be topped
+/// up later via `PurchaseBillLinesController#settlePayment`. The
+/// remaining `price - paidAmount` is what the owner owes that supplier.
+///
+/// status: 'in_stock' | 'sold'
+model PurchaseBillLine {
+  id             String       @id @default(cuid())
+  purchaseBillId String
+  purchaseBill   PurchaseBill @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
+
+  itemName    String
+  quantity    Float   @default(1)
+  description String?
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  chassisNumber String
+  motorNumber   String
+  modelYear     Int?
+
+  price      Float
+  paidAmount Float  @default(0)
+  notes      String?
+
+  status String @default("in_stock")
+
+  createdAt DateTime @default(now())
+
+  // A list, not a to-one: cancelling a sale frees the car to be sold again,
+  // so more than one SellingBill (only one ever `active`) can reference the
+  // same line over its history — see the file-level note on SellingBill.
+  sellingBills SellingBill[]
+
+  @@index([purchaseBillId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_bill_lines")
+}
+
+/// One car sold to one buyer. Buying-side fields (`itemName`,
+/// `supplierName`, `buyingPrice`, `buyingDate`, chassis/motor/model year)
+/// are snapshotted from the `PurchaseBillLine` at sale time, so this
+/// document still reads correctly even if that line's own data changes
+/// later. `profit` is resolved server-side (`sellingPrice - buyingPrice`)
+/// at creation, never recomputed from the client.
+///
+/// `purchaseLineId` is deliberately not `@unique`: cancelling a sale must
+/// free the car to be sold again (to a different buyer, say), and a
+/// cancelled row stays for the audit trail rather than being deleted — so
+/// uniqueness ("this car has at most one *active* sale") is enforced in
+/// the service layer instead of the schema.
+///
+/// status: 'active' | 'cancelled'
+model SellingBill {
+  id             String           @id @default(cuid())
+  number         String           @unique
+  purchaseLineId String
+  purchaseLine   PurchaseBillLine @relation(fields: [purchaseLineId], references: [id], onDelete: Restrict)
+
+  itemName      String
+  supplierName  String
+  buyingPrice   Float
+  buyingDate    DateTime
+  chassisNumber String
+  motorNumber   String
+  modelYear     Int?
+
+  sellingPrice Float
+  sellingDate  DateTime
+  buyerName    String
+  buyerAddress String?
+  buyerPhone   String?
+  notes        String?
+  profit       Float
+
+  status          String    @default("active")
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelledByName String?
+  cancelReason    String?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@index([purchaseLineId])
+  @@map("selling_bills")
+}
+
+model Expense {
+  id     String   @id @default(cuid())
+  name   String
+  amount Float
+  date   DateTime
+  note   String?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@map("expenses")
+}
+
+/// The cash ledger — every entry is one atomic cash movement. Capital
+/// balance is `sum(credit) - sum(debit)` over this table, computed on
+/// read rather than cached, since this app's data volume never justifies
+/// the staleness risk of a running total.
+///
+/// type: 'capital_injection' | 'purchase_payment' | 'debt_settlement' | 'sale' | 'expense'
+/// direction: 'credit' | 'debit'
+/// referenceType: 'purchase_bill_line' | 'selling_bill' | 'expense' | 'capital'
+model CashTransaction {
+  id          String @id @default(cuid())
+  type        String
+  direction   String
+  amount      Float
+  date        DateTime
+  description String
+
+  itemName         String?
+  counterpartyName String?
+
+  referenceType String?
+  referenceId   String?
+
+  createdAt     DateTime @default(now())
+  createdBy     String
+  createdByName String
+
+  @@index([date])
+  @@index([referenceId])
+  @@index([type])
+  @@map("cash_transactions")
+}

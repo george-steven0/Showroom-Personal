@@ -1,0 +1,17 @@
+node_modules
+dist
+*.log
+
+# Runtime data — never commit real business data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+backups/*
+!backups/.gitkeep
+logs/*
+!logs/.gitkeep
+
+.env
+.env.local

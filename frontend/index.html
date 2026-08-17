@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Car showroom management — suppliers, buying and selling bills, capital, supplier debt, profit and expenses." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Showroom</title>
+    <script>
+      // Paint the correct theme before React mounts to avoid a flash.
+      try {
+        var s = JSON.parse(localStorage.getItem('persist:sr-ui') || '{}')
+        var mode = s.theme ? JSON.parse(s.theme) : 'light'
+        if (mode === 'system') {
+          mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        if (mode === 'dark') document.documentElement.classList.add('dark')
+        var lang = s.language ? JSON.parse(s.language) : 'en'
+        document.documentElement.lang = lang
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
