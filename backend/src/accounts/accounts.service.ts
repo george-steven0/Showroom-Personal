@@ -13,19 +13,31 @@ export class AccountsService {
   ) {}
 
   async getSummary() {
-    const [totalCapital, activeLines, carsSoldCount] = await Promise.all([
+    const [totalCapital, activeLines, carsSoldCount, capitalInjected, allTimeProfit, allTimeExpenses] = await Promise.all([
       this.ledger.getCapitalBalance(),
       this.prisma.purchaseBillLine.findMany({
         where: { purchaseBill: { status: 'active' } },
         select: { status: true, price: true, paidAmount: true },
       }),
       this.prisma.sellingBill.count({ where: { status: 'active' } }),
+      this.prisma.cashTransaction.aggregate({ where: { type: 'capital_injection' }, _sum: { amount: true } }),
+      this.prisma.sellingBill.aggregate({ where: { status: 'active' }, _sum: { profit: true } }),
+      this.prisma.expense.aggregate({ _sum: { amount: true } }),
     ])
 
     const totalOwedToSuppliers = round2(activeLines.reduce((sum, line) => sum + Math.max(0, line.price - line.paidAmount), 0))
-    const carsInStock = activeLines.filter((line) => line.status === 'in_stock').length
+    const inStockLines = activeLines.filter((line) => line.status === 'in_stock')
+    const carsInStock = inStockLines.length
 
-    return { totalCapital, totalOwedToSuppliers, carsInStock, carsSoldCount }
+    // What the owner has ever put in, plus every dollar of profit or loss
+    // actually realized by selling a car, minus every expense — never
+    // touched by an unsold purchase, since that's just cash turned into a
+    // car of equal value, not money spent or lost. See moneyTiedUpInStock
+    // for how much of this total isn't liquid cash right now.
+    const totalMoneyAllTime = round2((capitalInjected._sum.amount ?? 0) + (allTimeProfit._sum.profit ?? 0) - (allTimeExpenses._sum.amount ?? 0))
+    const moneyTiedUpInStock = round2(inStockLines.reduce((sum, line) => sum + line.paidAmount, 0))
+
+    return { totalCapital, totalOwedToSuppliers, carsInStock, carsSoldCount, totalMoneyAllTime, moneyTiedUpInStock }
   }
 
   async getOwed() {

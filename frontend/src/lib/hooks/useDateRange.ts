@@ -12,6 +12,8 @@ function rangeForPreset(preset: DateRangePreset, from?: string, to?: string): { 
       return { from: formatIso(today.startOf('month')), to: formatIso(today.endOf('month')) }
     case 'year':
       return { from: formatIso(today.startOf('year')), to: formatIso(today.endOf('year')) }
+    case 'all':
+      return { from: '', to: '' }
     case 'custom':
       return { from: from ?? formatIso(today.startOf('month')), to: to ?? formatIso(today) }
   }

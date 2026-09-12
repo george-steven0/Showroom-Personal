@@ -15,6 +15,7 @@ import { DashboardModule } from './dashboard/dashboard.module'
 import { ReportsModule } from './reports/reports.module'
 import { LedgerModule } from './ledger/ledger.module'
 import { SettingsModule } from './settings/settings.module'
+import { InventoryModule } from './inventory/inventory.module'
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { SettingsModule } from './settings/settings.module'
     AccountsModule,
     DashboardModule,
     ReportsModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

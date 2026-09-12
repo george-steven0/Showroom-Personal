@@ -22,7 +22,7 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(adminPassword, 10)
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { username: adminUsername },
     update: {},
     create: {
@@ -31,6 +31,19 @@ async function main() {
       fullName: 'Administrator',
     },
   })
+
+  const branches: { name: string; nameAr: string }[] = [
+    { name: 'Railway branch', nameAr: 'فرع الطريق السريع' },
+    { name: 'El mahalla branch', nameAr: 'فرع المحلة الكبرى' },
+    { name: 'Kafr el sheikh branch', nameAr: 'فرع كفر الشيخ' },
+  ]
+  for (const { name, nameAr } of branches) {
+    await prisma.inventoryBranch.upsert({
+      where: { name },
+      update: {},
+      create: { name, nameAr, createdBy: admin.id, createdByName: admin.fullName },
+    })
+  }
 
   await prisma.systemSettings.upsert({
     where: { id: 'singleton' },

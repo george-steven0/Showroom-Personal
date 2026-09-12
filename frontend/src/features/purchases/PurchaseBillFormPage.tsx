@@ -166,6 +166,8 @@ export default function PurchaseBillFormPage() {
                   key={field.id}
                   index={index}
                   control={form.control}
+                  setValue={form.setValue}
+                  getValues={form.getValues}
                   supplierOptions={supplierOptions}
                   onRemove={() => remove(index)}
                   canRemove={fields.length > 1}

@@ -10,18 +10,20 @@ export interface DateRangeFilterProps {
   value: DateRangeValue
   onPreset: (preset: DateRangePreset) => void
   onCustom: (from: string, to: string) => void
+  allowAllTime?: boolean
 }
 
-/** Week / month / year / custom filter shared by the dashboard, accounts and summary pages. */
-export function DateRangeFilter({ value, onPreset, onCustom }: DateRangeFilterProps) {
+/** Week / month / year / (optionally all-time) / custom filter shared by the dashboard, accounts and summary pages. */
+export function DateRangeFilter({ value, onPreset, onCustom, allowAllTime = false }: DateRangeFilterProps) {
   const { t } = useTranslation()
+  const presets = allowAllTime ? [...PRESETS, 'all' as const] : PRESETS
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Segmented
         value={value.preset === 'custom' ? '' : value.preset}
         onChange={(preset) => onPreset(preset as DateRangePreset)}
-        options={PRESETS.map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
+        options={presets.map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
         className="hidden md:inline-flex"
       />
 
@@ -29,19 +31,21 @@ export function DateRangeFilter({ value, onPreset, onCustom }: DateRangeFilterPr
         value={value.preset}
         onChange={(preset) => onPreset(preset as DateRangePreset)}
         className="min-w-[150px] md:hidden"
-        options={[...PRESETS, 'custom' as const].map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
+        options={[...presets, 'custom' as const].map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
       />
 
-      <DatePicker.RangePicker
-        value={[dayjs(value.from), dayjs(value.to)]}
-        allowClear={false}
-        onChange={(dates) => {
-          if (!dates?.[0] || !dates?.[1]) return
-          onCustom(formatIso(dates[0]), formatIso(dates[1]))
-        }}
-        disabledDate={(current) => Boolean(current && current.isAfter(dayjs(), 'day'))}
-        className="min-w-[240px]"
-      />
+      {value.preset !== 'all' && (
+        <DatePicker.RangePicker
+          value={[dayjs(value.from), dayjs(value.to)]}
+          allowClear={false}
+          onChange={(dates) => {
+            if (!dates?.[0] || !dates?.[1]) return
+            onCustom(formatIso(dates[0]), formatIso(dates[1]))
+          }}
+          disabledDate={(current) => Boolean(current && current.isAfter(dayjs(), 'day'))}
+          className="min-w-[240px]"
+        />
+      )}
     </div>
   )
 }

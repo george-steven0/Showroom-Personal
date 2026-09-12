@@ -40,7 +40,7 @@ export const SellingBillPrint = forwardRef<HTMLDivElement, { bill: SellingBill }
         <tbody>
           <tr>
             <td className="py-2">{bill.itemName}</td>
-            <td className="py-2">{bill.chassisNumber}</td>
+            <td className="py-2 ltr-code">{bill.chassisNumber}</td>
             <td className="py-2">{formatDate(bill.buyingDate)}</td>
             <td className="py-2 text-end tnum font-semibold">{formatMoney(bill.sellingPrice)}</td>
           </tr>

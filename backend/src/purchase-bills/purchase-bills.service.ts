@@ -24,15 +24,18 @@ export class PurchaseBillsService {
   ) {}
 
   async list(query: ListPurchaseBillsQueryDto) {
-    const where: Prisma.PurchaseBillWhereInput = query.search
-      ? {
-          OR: [
-            { number: { contains: query.search } },
-            { lines: { some: { itemName: { contains: query.search } } } },
-            { lines: { some: { chassisNumber: { contains: query.search } } } },
-          ],
-        }
-      : {}
+    const where: Prisma.PurchaseBillWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { number: { contains: query.search } },
+              { lines: { some: { itemName: { contains: query.search } } } },
+              { lines: { some: { chassisNumber: { contains: query.search } } } },
+            ],
+          }
+        : {}),
+    }
 
     const [rows, total] = await Promise.all([
       this.prisma.purchaseBill.findMany({

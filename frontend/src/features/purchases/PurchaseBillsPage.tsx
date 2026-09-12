@@ -8,6 +8,7 @@ import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useNotify } from '@/lib/hooks/useNotify'
 import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
+import { BillStatusFilter, type BillStatusFilterValue } from '@/components/ui/BillStatusFilter'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
@@ -24,7 +25,8 @@ export default function PurchaseBillsPage() {
   const notify = useNotify()
 
   const query = useTableQuery({ sortBy: 'date', sortOrder: 'descend' })
-  const { data, isLoading, isFetching } = useGetPurchaseBillsQuery(query.params)
+  const [status, setStatus] = useState<BillStatusFilterValue>('active')
+  const { data, isLoading, isFetching } = useGetPurchaseBillsQuery({ ...query.params, status: status === 'all' ? undefined : status })
   const [cancelBill, { isLoading: cancelling }] = useCancelPurchaseBillMutation()
 
   const [viewing, setViewing] = useState<PurchaseBill | null>(null)
@@ -121,9 +123,22 @@ export default function PurchaseBillsPage() {
         data={data}
         loading={isLoading || isFetching}
         query={query}
+        filters={
+          <BillStatusFilter
+            value={status}
+            onChange={(next) => {
+              setStatus(next)
+              query.setPage(1)
+            }}
+          />
+        }
         rowClassName={(row) => (row.status === 'cancelled' ? 'row-danger' : '')}
         searchPlaceholder={`${t('purchases.number')} · ${t('purchases.itemName')}`}
-        empty={{ title: t('purchases.empty'), description: t('purchases.emptyHint'), action: addButton }}
+        empty={
+          status === 'active'
+            ? { title: t('purchases.empty'), description: t('purchases.emptyHint'), action: addButton }
+            : { title: t('common.noResults') }
+        }
       />
 
       <Drawer
@@ -158,8 +173,8 @@ export default function PurchaseBillsPage() {
               columns={[
                 { title: t('purchases.itemName'), dataIndex: 'itemName' },
                 { title: t('purchases.supplier'), dataIndex: 'supplierName' },
-                { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber' },
-                { title: t('purchases.motorNumber'), dataIndex: 'motorNumber' },
+                { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber', render: (value: string) => <span className="ltr-code">{value}</span> },
+                { title: t('purchases.motorNumber'), dataIndex: 'motorNumber', render: (value: string) => <span className="ltr-code">{value}</span> },
                 { title: t('purchases.modelYear'), dataIndex: 'modelYear', render: (value: number | null) => value ?? '—' },
                 { title: t('purchases.price'), dataIndex: 'price', align: 'right', render: (value: number) => <Money value={value} /> },
                 { title: t('purchases.paidAmount'), dataIndex: 'paidAmount', align: 'right', render: (value: number) => <Money value={value} /> },

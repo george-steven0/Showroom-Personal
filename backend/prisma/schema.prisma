@@ -236,6 +236,77 @@ model CashTransaction {
   @@map("cash_transactions")
 }
 
+/// A physical showroom location. Purely a label for `InventoryItem` rows —
+/// unrelated to `Supplier`, `PurchaseBill`, or anything else that feeds the
+/// accounts/ledger side of the app.
+///
+/// `name`/`nameAr` are just the displayed labels (English/Arabic) — every
+/// filter and reference elsewhere keys off `id`, which never changes even if
+/// a branch is renamed in one or both languages.
+model InventoryBranch {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  nameAr String?
+
+  createdAt     DateTime @default(now())
+  createdBy     String
+  createdByName String
+
+  items InventoryItem[]
+
+  @@map("inventory_branches")
+}
+
+/// A manually-logged car at a branch — entirely separate from
+/// `PurchaseBillLine`/`SellingBill` and never touches `CashTransaction`.
+/// This is a standalone paper-ledger-style page: what's physically sitting
+/// at each branch, its asking prices, and who it sold to, with no effect
+/// on capital, profit, or any other page in the app.
+///
+/// status: 'in_stock' | 'partial_paid' | 'sold' — derived from `paidAmount`
+/// vs `customerSellPrice`, never set directly: a buyer with `paidAmount` <
+/// `customerSellPrice` is `partial_paid`; once it reaches the full price the
+/// item flips to `sold`.
+model InventoryItem {
+  id String @id @default(cuid())
+
+  carType       String
+  brand         String?
+  chassisNumber String?
+  motorNumber   String?
+  modelYear     Int?
+  color         String?
+  notes         String?
+
+  branchId String
+  branch   InventoryBranch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  buyPrice          Float?
+  traderSellPrice   Float
+  customerSellPrice Float
+
+  status     String @default("in_stock")
+  paidAmount Float  @default(0)
+
+  buyerName    String?
+  buyerPhone   String?
+  buyerAddress String?
+  saleNotes    String?
+  saleDate     DateTime?
+  soldAt       DateTime?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@index([branchId])
+  @@index([status])
+  @@map("inventory_items")
+}
+
 /// Singleton row (`id` is hardcoded to `"singleton"`, enforced only at the
 /// service layer — nothing in the schema stops a second row, but nothing
 /// ever inserts one). Branding shown on the login screen and around the

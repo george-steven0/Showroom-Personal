@@ -1,3 +1,8 @@
+import { IsIn, IsOptional } from 'class-validator'
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto'
 
-export class ListPurchaseBillsQueryDto extends PaginationQueryDto {}
+export class ListPurchaseBillsQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(['active', 'cancelled'])
+  status?: 'active' | 'cancelled'
+}

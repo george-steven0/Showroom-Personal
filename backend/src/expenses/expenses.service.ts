@@ -3,12 +3,21 @@ import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { LedgerService } from '../ledger/ledger.service'
 import { paginate, resolveOrderBy, toSkipTake } from '../common/pagination'
+import { round2 } from '../common/money'
 import type { CreateExpenseDto } from './dto/create-expense.dto'
 import type { UpdateExpenseDto } from './dto/update-expense.dto'
 import type { ListExpensesQueryDto } from './dto/list-expenses-query.dto'
+import type { ExpenseSummaryQueryDto } from './dto/expense-summary-query.dto'
 import type { RequestUser } from '../common/decorators/current-user.decorator'
 
 const SORTABLE_FIELDS: Record<string, string> = { name: 'name', amount: 'amount', date: 'date' }
+
+function buildWhere(query: { search?: string; from?: string; to?: string }): Prisma.ExpenseWhereInput {
+  return {
+    ...(query.search ? { name: { contains: query.search } } : {}),
+    ...(query.from && query.to ? { date: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
+  }
+}
 
 @Injectable()
 export class ExpensesService {
@@ -18,10 +27,7 @@ export class ExpensesService {
   ) {}
 
   async list(query: ListExpensesQueryDto) {
-    const where: Prisma.ExpenseWhereInput = {
-      ...(query.search ? { name: { contains: query.search } } : {}),
-      ...(query.from && query.to ? { date: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
-    }
+    const where = buildWhere(query)
 
     const [rows, total] = await Promise.all([
       this.prisma.expense.findMany({
@@ -33,6 +39,12 @@ export class ExpensesService {
     ])
 
     return paginate(rows, total, query)
+  }
+
+  async summary(query: ExpenseSummaryQueryDto) {
+    const where = buildWhere(query)
+    const { _sum, _count } = await this.prisma.expense.aggregate({ where, _sum: { amount: true }, _count: true })
+    return { totalAmount: round2(_sum.amount ?? 0), count: _count }
   }
 
   async create(dto: CreateExpenseDto, user: RequestUser) {

@@ -194,6 +194,15 @@ html[dir='rtl'] .animate-\[loading-bar_1s_ease-in-out_infinite\] {
   font-feature-settings: 'tnum';
 }
 
+/* Chassis/motor numbers mix Latin letters and digits with no Arabic characters.
+   Inside an RTL page the browser's bidi algorithm can reorder those runs relative
+   to each other (e.g. "003225TA4" renders as "TA4003225"). Isolating them as their
+   own LTR run keeps the digits/letters in the order they were actually typed. */
+.ltr-code {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 ::selection {
   background: var(--sr-primary-soft);
   color: var(--sr-primary-ink);
@@ -292,6 +301,9 @@ textarea,
 }
 .row-warning > td {
   background-color: var(--sr-warning-soft) !important;
+}
+.row-sold > td {
+  background-color: var(--sr-neutral-soft) !important;
 }
 
 .ant-select-dropdown,

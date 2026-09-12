@@ -3,7 +3,7 @@ import { Button, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { useGetAccountsSummaryQuery, useGetOwedToSuppliersQuery, useGetProfitSummaryQuery } from '@/api/accountsApi'
-import { useDeleteExpenseMutation, useGetExpensesQuery } from '@/api/expensesApi'
+import { useDeleteExpenseMutation, useGetExpensesQuery, useGetExpensesSummaryQuery } from '@/api/expensesApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useDateRange } from '@/lib/hooks/useDateRange'
 import { useNotify } from '@/lib/hooks/useNotify'
@@ -35,7 +35,7 @@ export default function AccountsPage() {
 
   const owedColumns: ColumnsType<OwedSupplierRow> = [
     { title: t('accounts.item'), dataIndex: 'itemName', render: (value: string) => <span className="font-medium text-ink">{value}</span> },
-    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum text-muted">{value}</span> },
+    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value}</span> },
     { title: t('accounts.supplier'), dataIndex: 'supplierName' },
     { title: t('accounts.cost'), dataIndex: 'price', align: 'right', render: (value: number) => <Money value={value} /> },
     { title: t('accounts.paid'), dataIndex: 'paidAmount', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} className="text-success" /> },
@@ -55,6 +55,29 @@ export default function AccountsPage() {
       <PageHeader title={t('accounts.title')} subtitle={t('accounts.subtitle')} actions={<Button icon={UI_ICONS.plus} onClick={() => setCapitalOpen(true)}>{t('accounts.addCapital')}</Button>} />
 
       <div className="space-y-4">
+        <SectionCard bodyClassName="p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-muted">{t('accounts.totalMoneyAllTime')}</p>
+              <p className="tnum mt-1.5 text-[32px] leading-tight font-semibold text-ink">
+                <Money value={summary?.totalMoneyAllTime} signed />
+              </p>
+              <p className="mt-1 text-xs text-subtle">{t('accounts.totalMoneyHint')}</p>
+              {(summary?.moneyTiedUpInStock ?? 0) > 0 && (
+                <p className="mt-2 text-xs font-medium text-warning">
+                  {t('accounts.moneyTiedUpHint', {
+                    amount: formatMoney(summary?.moneyTiedUpInStock ?? 0),
+                    count: summary?.carsInStock ?? 0,
+                  })}
+                </p>
+              )}
+            </div>
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden>
+              {UI_ICONS.coins}
+            </span>
+          </div>
+        </SectionCard>
+
         <KpiGrid>
           <KpiCard
             label={t('accounts.totalCapital')}
@@ -118,7 +141,7 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        <ExpensesSection range={range} />
+        <ExpensesSection />
       </div>
 
       <AddCapitalModal open={capitalOpen} onClose={() => setCapitalOpen(false)} />
@@ -128,12 +151,15 @@ export default function AccountsPage() {
 }
 
 /** Declared at module scope so it isn't remounted (losing its table state) on every AccountsPage re-render. */
-function ExpensesSection({ range }: { range: { from: string; to: string } }) {
+function ExpensesSection() {
   const { t } = useTranslation()
   const notify = useNotify()
 
+  const { value: range, setPreset, setCustomRange } = useDateRange('all')
+  const dateParams = range.preset === 'all' ? {} : { from: range.from, to: range.to }
   const query = useTableQuery({ sortBy: 'date', sortOrder: 'descend' })
-  const { data, isLoading, isFetching } = useGetExpensesQuery({ ...query.params, from: range.from, to: range.to })
+  const { data, isLoading, isFetching } = useGetExpensesQuery({ ...query.params, ...dateParams })
+  const { data: summary, isFetching: summaryFetching } = useGetExpensesSummaryQuery({ search: query.params.search, ...dateParams })
   const [deleteExpense, { isLoading: deleting }] = useDeleteExpenseMutation()
 
   const [editing, setEditing] = useState<Expense | null>(null)
@@ -195,8 +221,23 @@ function ExpensesSection({ range }: { range: { from: string; to: string } }) {
   )
 
   return (
-    <SectionCard title={t('accounts.expenses')} bodyClassName="p-0">
+    <SectionCard
+      title={t('accounts.expenses')}
+      actions={<DateRangeFilter value={range} onPreset={setPreset} onCustom={setCustomRange} allowAllTime />}
+      bodyClassName="p-0"
+    >
       <div className="p-4 sm:p-5">
+        <div className="mb-4 max-w-xs">
+          <KpiCard
+            label={t('accounts.totalExpenses')}
+            value={<Money value={summary?.totalAmount} />}
+            icon={UI_ICONS.wallet}
+            tone="danger"
+            loading={summaryFetching && summary === undefined}
+            footer={<span>{t('accounts.totalExpensesCount', { count: summary?.count ?? 0 })}</span>}
+          />
+        </div>
+
         <DataTable<Expense>
           rowKey="id"
           columns={columns}

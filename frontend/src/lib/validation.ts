@@ -107,6 +107,56 @@ export function recordPaymentSchema(t: TFunction, maxAmount: number, formattedMa
   })
 }
 
+export function inventoryItemSchema(t: TFunction) {
+  return z.object({
+    carType: z.string().trim().min(1, t('validation.carTypeRequired')),
+    brand: z.string().trim().optional(),
+    chassisNumber: z.string().trim().optional(),
+    motorNumber: z.string().trim().optional(),
+    modelYear: z
+      .number()
+      .int()
+      .min(1950, t('validation.yearInvalid', { max: CURRENT_YEAR }))
+      .max(CURRENT_YEAR, t('validation.yearInvalid', { max: CURRENT_YEAR }))
+      .nullable()
+      .optional(),
+    color: z.string().trim().optional(),
+    notes: z.string().trim().optional(),
+    branchId: z.string().min(1, t('validation.branchRequired')),
+    buyPrice: z.number().min(0, t('validation.amountNonNegative')).nullable().optional(),
+    traderSellPrice: z.number({ message: t('validation.pricePositive') }).positive(t('validation.pricePositive')),
+    customerSellPrice: z.number({ message: t('validation.pricePositive') }).positive(t('validation.pricePositive')),
+  })
+}
+
+export function markSoldSchema(t: TFunction, maxAmount: number, formattedMax: string) {
+  return z.object({
+    buyerName: z.string().trim().min(1, t('validation.nameRequired')),
+    buyerPhone: z
+      .string()
+      .trim()
+      .optional()
+      .refine((value) => !value || PHONE_RE.test(value), t('validation.phoneInvalid')),
+    buyerAddress: z.string().trim().optional(),
+    saleNotes: z.string().trim().optional(),
+    saleDate: z.string().min(1, t('validation.required')),
+    paidAmount: z
+      .number({ message: t('validation.amountNonNegative') })
+      .min(0, t('validation.amountNonNegative'))
+      .max(maxAmount, t('validation.exceedsOwed', { amount: formattedMax })),
+  })
+}
+
+export function recordInventoryPaymentSchema(t: TFunction, maxAmount: number, formattedMax: string) {
+  return z.object({
+    amount: z
+      .number({ message: t('validation.amountPositive') })
+      .positive(t('validation.amountPositive'))
+      .max(maxAmount, t('validation.exceedsOwed', { amount: formattedMax })),
+    date: z.string().min(1, t('validation.required')),
+  })
+}
+
 export function settingsSchema(t: TFunction) {
   return z.object({
     systemName: z.string().trim().min(2, t('validation.systemNameRequired')),
@@ -124,3 +174,6 @@ export type ExpenseFormValues = z.infer<ReturnType<typeof expenseSchema>>
 export type CapitalInjectionFormValues = z.infer<ReturnType<typeof capitalInjectionSchema>>
 export type RecordPaymentFormValues = z.infer<ReturnType<typeof recordPaymentSchema>>
 export type SettingsFormValues = z.infer<ReturnType<typeof settingsSchema>>
+export type InventoryItemFormValues = z.infer<ReturnType<typeof inventoryItemSchema>>
+export type MarkSoldFormValues = z.infer<ReturnType<typeof markSoldSchema>>
+export type RecordInventoryPaymentFormValues = z.infer<ReturnType<typeof recordInventoryPaymentSchema>>

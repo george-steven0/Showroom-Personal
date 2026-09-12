@@ -25,7 +25,7 @@ export const PurchaseBillPrint = forwardRef<HTMLDivElement, { bill: PurchaseBill
             <tr key={line.id} className="border-b border-line/60">
               <td className="py-2">{line.itemName}</td>
               <td className="py-2">{line.supplierName}</td>
-              <td className="py-2">{line.chassisNumber}</td>
+              <td className="py-2 ltr-code">{line.chassisNumber}</td>
               <td className="py-2 text-end tnum">{formatMoney(line.price)}</td>
               <td className="py-2 text-end tnum">{formatMoney(line.paidAmount)}</td>
               <td className="py-2 text-end tnum">{formatMoney(line.owed)}</td>

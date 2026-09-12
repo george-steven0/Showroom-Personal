@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './primitives'
-import type { BillStatus, CashTransactionType, PurchaseLineStatus } from '@/types'
+import type { BillStatus, CashTransactionType, InventoryItemStatus, PurchaseLineStatus } from '@/types'
 
 export function BillStatusTag({ status }: { status: BillStatus }) {
   const { t } = useTranslation()
@@ -10,6 +10,17 @@ export function BillStatusTag({ status }: { status: BillStatus }) {
 export function PurchaseLineStatusTag({ status }: { status: PurchaseLineStatus }) {
   const { t } = useTranslation()
   return <StatusBadge tone={status === 'in_stock' ? 'info' : 'neutral'}>{t(`status.${status}`)}</StatusBadge>
+}
+
+const INVENTORY_STATUS_TONE: Record<InventoryItemStatus, 'info' | 'warning' | 'success'> = {
+  in_stock: 'info',
+  partial_paid: 'warning',
+  sold: 'success',
+}
+
+export function InventoryStatusTag({ status }: { status: InventoryItemStatus }) {
+  const { t } = useTranslation()
+  return <StatusBadge tone={INVENTORY_STATUS_TONE[status]}>{t(`status.${status}`)}</StatusBadge>
 }
 
 const TX_TONE: Record<CashTransactionType, 'success' | 'danger' | 'warning' | 'primary'> = {

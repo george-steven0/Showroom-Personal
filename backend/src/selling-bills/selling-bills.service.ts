@@ -19,16 +19,19 @@ export class SellingBillsService {
   ) {}
 
   async list(query: ListSellingBillsQueryDto) {
-    const where: Prisma.SellingBillWhereInput = query.search
-      ? {
-          OR: [
-            { number: { contains: query.search } },
-            { buyerName: { contains: query.search } },
-            { itemName: { contains: query.search } },
-            { chassisNumber: { contains: query.search } },
-          ],
-        }
-      : {}
+    const where: Prisma.SellingBillWhereInput = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { number: { contains: query.search } },
+              { buyerName: { contains: query.search } },
+              { itemName: { contains: query.search } },
+              { chassisNumber: { contains: query.search } },
+            ],
+          }
+        : {}),
+    }
 
     const [rows, total] = await Promise.all([
       this.prisma.sellingBill.findMany({

@@ -173,6 +173,7 @@ export function SelectField<T extends FieldValues>({
   onAfterChange,
   notFoundContent,
   loading,
+  filterOption,
 }: BaseProps<T> & {
   options: SelectProps['options']
   allowClear?: boolean
@@ -180,6 +181,7 @@ export function SelectField<T extends FieldValues>({
   onAfterChange?: (value: unknown) => void
   notFoundContent?: ReactNode
   loading?: boolean
+  filterOption?: SelectProps['filterOption']
 }) {
   return (
     <Controller
@@ -203,7 +205,8 @@ export function SelectField<T extends FieldValues>({
             showSearch={showSearch}
             loading={loading}
             notFoundContent={notFoundContent}
-            optionFilterProp="label"
+            optionFilterProp={filterOption ? undefined : 'label'}
+            filterOption={filterOption}
             className="w-full"
           />
         </FieldShell>

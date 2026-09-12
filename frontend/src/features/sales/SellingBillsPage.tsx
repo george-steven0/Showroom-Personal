@@ -8,6 +8,7 @@ import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useNotify } from '@/lib/hooks/useNotify'
 import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
+import { BillStatusFilter, type BillStatusFilterValue } from '@/components/ui/BillStatusFilter'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Money } from '@/components/ui/Money'
 import { Field, PageHeader } from '@/components/ui/primitives'
@@ -23,7 +24,8 @@ export default function SellingBillsPage() {
   const notify = useNotify()
 
   const query = useTableQuery({ sortBy: 'sellingDate', sortOrder: 'descend' })
-  const { data, isLoading, isFetching } = useGetSellingBillsQuery(query.params)
+  const [status, setStatus] = useState<BillStatusFilterValue>('active')
+  const { data, isLoading, isFetching } = useGetSellingBillsQuery({ ...query.params, status: status === 'all' ? undefined : status })
   const [cancelBill, { isLoading: cancelling }] = useCancelSellingBillMutation()
 
   const [viewing, setViewing] = useState<SellingBill | null>(null)
@@ -94,9 +96,22 @@ export default function SellingBillsPage() {
         data={data}
         loading={isLoading || isFetching}
         query={query}
+        filters={
+          <BillStatusFilter
+            value={status}
+            onChange={(next) => {
+              setStatus(next)
+              query.setPage(1)
+            }}
+          />
+        }
         rowClassName={(row) => (row.status === 'cancelled' ? 'row-danger' : '')}
         searchPlaceholder={`${t('sales.number')} · ${t('sales.buyerName')}`}
-        empty={{ title: t('sales.empty'), description: t('sales.emptyHint'), action: addButton }}
+        empty={
+          status === 'active'
+            ? { title: t('sales.empty'), description: t('sales.emptyHint'), action: addButton }
+            : { title: t('common.noResults') }
+        }
       />
 
       <Drawer

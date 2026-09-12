@@ -57,6 +57,21 @@ export const NAV_ICONS = {
       <path d="M12 3v2M12 19v2M4.2 7.8l1.7 1M18.1 15.2l1.7 1M3 12h2M19 12h2M4.2 16.2l1.7-1M18.1 8.8l1.7-1" />
     </svg>
   ),
+  car: (
+    <svg {...base} aria-hidden>
+      <path d="M5 17h14M6.5 17v2M17.5 17v2" />
+      <path d="M4 17v-4l2-5h12l2 5v4" />
+      <circle cx="7.5" cy="13.5" r="1" />
+      <circle cx="16.5" cy="13.5" r="1" />
+    </svg>
+  ),
+  box: (
+    <svg {...base} aria-hidden>
+      <path d="M21 8 12 3 3 8l9 5 9-5Z" />
+      <path d="M3 8v8l9 5 9-5V8" />
+      <path d="M12 13v8" />
+    </svg>
+  ),
 }
 
 export const UI_ICONS = {
@@ -97,14 +112,6 @@ export const UI_ICONS = {
     <svg {...base} width={16} height={16} aria-hidden>
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
-    </svg>
-  ),
-  car: (
-    <svg {...base} aria-hidden>
-      <path d="M5 17h14M6.5 17v2M17.5 17v2" />
-      <path d="M4 17v-4l2-5h12l2 5v4" />
-      <circle cx="7.5" cy="13.5" r="1" />
-      <circle cx="16.5" cy="13.5" r="1" />
     </svg>
   ),
   alert: (

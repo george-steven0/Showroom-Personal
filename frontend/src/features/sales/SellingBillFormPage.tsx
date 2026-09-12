@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Skeleton } from 'antd'
+import type { DefaultOptionType } from 'antd/es/select'
 import { useTranslation } from 'react-i18next'
 import { useCreateSellingBillMutation } from '@/api/sellingBillsApi'
 import { useGetAvailablePurchaseLinesQuery } from '@/api/purchaseBillsApi'
@@ -19,6 +20,8 @@ export default function SellingBillFormPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const notify = useNotify()
+  const [searchParams] = useSearchParams()
+  const preselectLineId = searchParams.get('lineId')
 
   const { data: availableLines, isLoading } = useGetAvailablePurchaseLinesQuery()
   const [createBill, { isLoading: creating }] = useCreateSellingBillMutation()
@@ -41,13 +44,30 @@ export default function SellingBillFormPage() {
 
   const lineOptions = (availableLines ?? []).map((line) => ({
     value: line.id,
-    label: `${line.itemName} — ${line.chassisNumber}`,
+    label: (
+      <>
+        {line.itemName} — <span className="ltr-code">{line.chassisNumber}</span>
+      </>
+    ),
+    searchText: `${line.itemName} ${line.chassisNumber}`,
   }))
+
+  const filterLineOption = (input: string, option?: DefaultOptionType & { searchText?: string }) =>
+    (option?.searchText ?? '').toLowerCase().includes(input.toLowerCase())
 
   const onSelectLine = (id: unknown) => {
     const line = (availableLines ?? []).find((row) => row.id === id) ?? null
     setSelectedLine(line)
   }
+
+  useEffect(() => {
+    if (!preselectLineId || !availableLines) return
+    const line = availableLines.find((row) => row.id === preselectLineId)
+    if (!line) return
+    form.setValue('purchaseLineId', line.id, { shouldValidate: true })
+    setSelectedLine(line)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectLineId, availableLines])
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -103,6 +123,7 @@ export default function SellingBillFormPage() {
                 required
                 options={lineOptions}
                 onAfterChange={onSelectLine}
+                filterOption={filterLineOption}
               />
             </FormRow>
 

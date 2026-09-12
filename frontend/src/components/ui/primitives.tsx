@@ -139,7 +139,7 @@ export function Field({
   return (
     <div className={className}>
       <dt className="text-[11px] font-medium tracking-wide text-subtle uppercase">{label}</dt>
-      <dd className={`mt-1 text-sm font-medium break-words text-ink ${mono ? 'tnum' : ''}`}>
+      <dd className={`mt-1 text-sm font-medium break-words text-ink ${mono ? 'tnum ltr-code' : ''}`}>
         {value === '' || value == null ? <span className="text-subtle">—</span> : value}
       </dd>
     </div>

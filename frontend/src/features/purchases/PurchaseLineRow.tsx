@@ -1,4 +1,5 @@
-import type { Control } from 'react-hook-form'
+import { useEffect, useRef } from 'react'
+import { useWatch, type Control, type UseFormGetValues, type UseFormSetValue } from 'react-hook-form'
 import { Button } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_CURRENCY } from '@/lib/constants'
@@ -11,17 +12,38 @@ const CURRENT_YEAR = new Date().getFullYear() + 1
 export function PurchaseLineRow({
   index,
   control,
+  setValue,
+  getValues,
   supplierOptions,
   onRemove,
   canRemove,
 }: {
   index: number
   control: Control<PurchaseBillFormValues>
+  setValue: UseFormSetValue<PurchaseBillFormValues>
+  getValues: UseFormGetValues<PurchaseBillFormValues>
   supplierOptions: { value: string; label: string }[]
   onRemove: () => void
   canRemove: boolean
 }) {
   const { t } = useTranslation()
+
+  const price = useWatch({ control, name: `lines.${index}.price` })
+  // Tracks the price we last auto-copied into paidAmount, so we can tell
+  // "still following price" apart from "the owner typed a different paid
+  // amount on purpose" — most buying bills are paid in full, but a
+  // partial payment (creating supplier debt) has to stick once entered,
+  // even if the price is edited again afterward.
+  const lastAutoValue = useRef(0)
+
+  useEffect(() => {
+    const currentPaid = getValues(`lines.${index}.paidAmount`)
+    if (currentPaid === lastAutoValue.current) {
+      setValue(`lines.${index}.paidAmount`, price ?? 0, { shouldValidate: true, shouldDirty: true })
+      lastAutoValue.current = price ?? 0
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [price])
 
   return (
     <div className="rounded-lg border border-line p-4">
@@ -54,7 +76,7 @@ export function PurchaseLineRow({
           control={control}
           name={`lines.${index}.paidAmount`}
           label={t('purchases.paidAmount')}
-          hint={t('accounts.whoIOweHint')}
+          hint={t('purchases.paidAmountHint')}
           min={0}
           precision={2}
           suffix={DEFAULT_CURRENCY}

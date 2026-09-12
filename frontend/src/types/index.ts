@@ -158,6 +158,8 @@ export interface AccountsSummary {
   totalOwedToSuppliers: number
   carsInStock: number
   carsSoldCount: number
+  totalMoneyAllTime: number
+  moneyTiedUpInStock: number
 }
 
 export interface ProfitSummary {
@@ -179,7 +181,7 @@ export interface DashboardData {
   recentTransactions: CashTransaction[]
 }
 
-export type DateRangePreset = 'week' | 'month' | 'year' | 'custom'
+export type DateRangePreset = 'week' | 'month' | 'year' | 'all' | 'custom'
 
 export interface DateRangeValue {
   preset: DateRangePreset
@@ -221,4 +223,45 @@ export interface BackupResult {
 export interface RestoreResult {
   success: boolean
   backupFilename: string
+}
+
+export interface InventoryBranch {
+  id: string
+  name: string
+  nameAr: string | null
+  createdAt: string
+  createdBy: string
+  createdByName: string
+}
+
+export type InventoryItemStatus = 'in_stock' | 'partial_paid' | 'sold'
+
+export interface InventoryItem {
+  id: string
+  carType: string
+  brand: string | null
+  chassisNumber: string | null
+  motorNumber: string | null
+  modelYear: number | null
+  color: string | null
+  notes: string | null
+  branchId: string
+  branch: InventoryBranch
+  buyPrice: number | null
+  traderSellPrice: number
+  customerSellPrice: number
+  status: InventoryItemStatus
+  paidAmount: number
+  buyerName: string | null
+  buyerPhone: string | null
+  buyerAddress: string | null
+  saleNotes: string | null
+  saleDate: string | null
+  soldAt: string | null
+  createdAt: string
+  createdBy: string
+  createdByName: string
+  updatedAt: string | null
+  updatedBy: string | null
+  updatedByName: string | null
 }
