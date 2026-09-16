@@ -21,6 +21,7 @@ export class SellingBillsService {
   async list(query: ListSellingBillsQueryDto) {
     const where: Prisma.SellingBillWhereInput = {
       ...(query.status ? { status: query.status } : {}),
+      ...(query.from && query.to ? { sellingDate: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
       ...(query.search
         ? {
             OR: [

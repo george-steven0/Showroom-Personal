@@ -3,6 +3,9 @@ import * as path from 'path'
 
 const KEEP = 30
 
+/** Every backup filename this app writes starts with this — lets you tell them apart from other apps' backups in a shared folder (e.g. a synced Drive folder). */
+const APP_PREFIX = 'SHP'
+
 export type BackupKind = 'backup' | 'pre-reset' | 'pre-restore'
 
 export interface BackupResult {
@@ -52,7 +55,7 @@ export async function performBackup(
   fs.mkdirSync(backupDir, { recursive: true })
 
   const createdAt = new Date()
-  const filename = `${kind}-${createdAt.toISOString().replace(/[:.]/g, '-')}.db`
+  const filename = `${APP_PREFIX}-${kind}-${createdAt.toISOString().replace(/[:.]/g, '-')}.db`
   const backupPath = path.join(backupDir, filename)
   fs.copyFileSync(dbPath, backupPath)
 
@@ -62,7 +65,7 @@ export async function performBackup(
     // machine's disk usage doesn't grow unbounded.
     const existing = fs
       .readdirSync(backupDir)
-      .filter((f) => f.startsWith('backup-') && f.endsWith('.db'))
+      .filter((f) => f.startsWith(`${APP_PREFIX}-backup-`) && f.endsWith('.db'))
       .sort()
     const toDelete = existing.slice(0, Math.max(0, existing.length - KEEP))
     for (const file of toDelete) fs.unlinkSync(path.join(backupDir, file))

@@ -11,26 +11,30 @@ export interface DateRangeFilterProps {
   onPreset: (preset: DateRangePreset) => void
   onCustom: (from: string, to: string) => void
   allowAllTime?: boolean
+  /** Always render the preset picker as a dropdown Select instead of Segmented tabs (still responsive on its own). */
+  dropdownOnly?: boolean
 }
 
 /** Week / month / year / (optionally all-time) / custom filter shared by the dashboard, accounts and summary pages. */
-export function DateRangeFilter({ value, onPreset, onCustom, allowAllTime = false }: DateRangeFilterProps) {
+export function DateRangeFilter({ value, onPreset, onCustom, allowAllTime = false, dropdownOnly = false }: DateRangeFilterProps) {
   const { t } = useTranslation()
   const presets = allowAllTime ? [...PRESETS, 'all' as const] : PRESETS
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Segmented
-        value={value.preset === 'custom' ? '' : value.preset}
-        onChange={(preset) => onPreset(preset as DateRangePreset)}
-        options={presets.map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
-        className="hidden md:inline-flex"
-      />
+      {!dropdownOnly && (
+        <Segmented
+          value={value.preset === 'custom' ? '' : value.preset}
+          onChange={(preset) => onPreset(preset as DateRangePreset)}
+          options={presets.map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
+          className="hidden md:inline-flex"
+        />
+      )}
 
       <Select
         value={value.preset}
         onChange={(preset) => onPreset(preset as DateRangePreset)}
-        className="min-w-[150px] md:hidden"
+        className={dropdownOnly ? 'min-w-37.5' : 'min-w-37.5 md:hidden'}
         options={[...presets, 'custom' as const].map((preset) => ({ value: preset, label: t(`dateRange.${preset}`) }))}
       />
 

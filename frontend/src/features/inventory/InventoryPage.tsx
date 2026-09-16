@@ -184,7 +184,7 @@ export default function InventoryPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted">{t('inventory.saleDate')}</span>
-            <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime />
+            <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime dropdownOnly />
             {addButton}
           </div>
         }

@@ -26,7 +26,7 @@ const REQUIRED_TABLES = [
   'system_settings',
 ]
 
-const BACKUP_FILENAME_RE = /^(backup|pre-reset|pre-restore)-[0-9T-]+Z\.db$/
+const BACKUP_FILENAME_RE = /^SHP-(backup|pre-reset|pre-restore)-[0-9T-]+Z\.db$/
 
 export interface BackupFileInfo {
   filename: string
@@ -78,9 +78,9 @@ export class SettingsService {
       .filter((filename) => BACKUP_FILENAME_RE.test(filename))
       .map((filename) => {
         const stat = fs.statSync(path.join(dir, filename))
-        const kind: BackupKind = filename.startsWith('pre-reset-')
+        const kind: BackupKind = filename.startsWith('SHP-pre-reset-')
           ? 'pre-reset'
-          : filename.startsWith('pre-restore-')
+          : filename.startsWith('SHP-pre-restore-')
             ? 'pre-restore'
             : 'backup'
         return { filename, kind, createdAt: stat.mtime.toISOString(), size: stat.size }

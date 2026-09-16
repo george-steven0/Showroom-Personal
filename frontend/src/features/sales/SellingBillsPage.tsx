@@ -5,11 +5,13 @@ import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { useCancelSellingBillMutation, useGetSellingBillsQuery } from '@/api/sellingBillsApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
+import { useDateRange } from '@/lib/hooks/useDateRange'
 import { useNotify } from '@/lib/hooks/useNotify'
 import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
 import { BillStatusFilter, type BillStatusFilterValue } from '@/components/ui/BillStatusFilter'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter'
 import { Money } from '@/components/ui/Money'
 import { Field, PageHeader } from '@/components/ui/primitives'
 import { BillStatusTag } from '@/components/ui/StatusTags'
@@ -25,7 +27,12 @@ export default function SellingBillsPage() {
 
   const query = useTableQuery({ sortBy: 'sellingDate', sortOrder: 'descend' })
   const [status, setStatus] = useState<BillStatusFilterValue>('active')
-  const { data, isLoading, isFetching } = useGetSellingBillsQuery({ ...query.params, status: status === 'all' ? undefined : status })
+  const { value: range, setPreset, setCustomRange } = useDateRange('all')
+  const { data, isLoading, isFetching } = useGetSellingBillsQuery({
+    ...query.params,
+    status: status === 'all' ? undefined : status,
+    ...(range.preset === 'all' ? {} : { from: range.from, to: range.to }),
+  })
   const [cancelBill, { isLoading: cancelling }] = useCancelSellingBillMutation()
 
   const [viewing, setViewing] = useState<SellingBill | null>(null)
@@ -88,7 +95,16 @@ export default function SellingBillsPage() {
 
   return (
     <>
-      <PageHeader title={t('sales.title')} subtitle={t('sales.subtitle')} actions={addButton} />
+      <PageHeader
+        title={t('sales.title')}
+        subtitle={t('sales.subtitle')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeFilter value={range} onPreset={setPreset} onCustom={setCustomRange} allowAllTime dropdownOnly />
+            {addButton}
+          </div>
+        }
+      />
 
       <DataTable<SellingBill>
         rowKey="id"

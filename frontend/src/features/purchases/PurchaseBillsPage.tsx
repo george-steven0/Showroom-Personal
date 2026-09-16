@@ -5,11 +5,13 @@ import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { useCancelPurchaseBillMutation, useGetPurchaseBillsQuery } from '@/api/purchaseBillsApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
+import { useDateRange } from '@/lib/hooks/useDateRange'
 import { useNotify } from '@/lib/hooks/useNotify'
 import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
 import { BillStatusFilter, type BillStatusFilterValue } from '@/components/ui/BillStatusFilter'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter'
 import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
 import { BillStatusTag, PurchaseLineStatusTag } from '@/components/ui/StatusTags'
@@ -26,7 +28,12 @@ export default function PurchaseBillsPage() {
 
   const query = useTableQuery({ sortBy: 'date', sortOrder: 'descend' })
   const [status, setStatus] = useState<BillStatusFilterValue>('active')
-  const { data, isLoading, isFetching } = useGetPurchaseBillsQuery({ ...query.params, status: status === 'all' ? undefined : status })
+  const { value: range, setPreset, setCustomRange } = useDateRange('all')
+  const { data, isLoading, isFetching } = useGetPurchaseBillsQuery({
+    ...query.params,
+    status: status === 'all' ? undefined : status,
+    ...(range.preset === 'all' ? {} : { from: range.from, to: range.to }),
+  })
   const [cancelBill, { isLoading: cancelling }] = useCancelPurchaseBillMutation()
 
   const [viewing, setViewing] = useState<PurchaseBill | null>(null)
@@ -115,7 +122,16 @@ export default function PurchaseBillsPage() {
 
   return (
     <>
-      <PageHeader title={t('purchases.title')} subtitle={t('purchases.subtitle')} actions={addButton} />
+      <PageHeader
+        title={t('purchases.title')}
+        subtitle={t('purchases.subtitle')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeFilter value={range} onPreset={setPreset} onCustom={setCustomRange} allowAllTime dropdownOnly />
+            {addButton}
+          </div>
+        }
+      />
 
       <DataTable<PurchaseBill>
         rowKey="id"
