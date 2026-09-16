@@ -27,6 +27,8 @@ import { ResetDatabaseModal } from './ResetDatabaseModal'
 import { RestoreDatabaseModal } from './RestoreDatabaseModal'
 
 const KIND_TONE = { backup: 'primary', 'pre-reset': 'warning', 'pre-restore': 'warning' } as const
+/** Seconds the backup button stays disabled after each click, so a click that lands twice can't kick off two backups at once. */
+const BACKUP_COOLDOWN_SECONDS = 5
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -43,6 +45,16 @@ export default function SettingsPage() {
   const [resetOpen, setResetOpen] = useState(false)
   const [restoreUploadOpen, setRestoreUploadOpen] = useState(false)
   const [restoreTarget, setRestoreTarget] = useState<BackupFileInfo | null>(null)
+  const [backupCooldown, setBackupCooldown] = useState(0)
+
+  // Ticks the cooldown down to 0 one second at a time — started fresh on
+  // every click (see handleCreateBackup), independent of how long the
+  // backup request itself takes, so a fast response can't shorten the guard.
+  useEffect(() => {
+    if (backupCooldown <= 0) return
+    const timer = setTimeout(() => setBackupCooldown((seconds) => seconds - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [backupCooldown])
 
   const schema = useMemo(() => settingsSchema(t), [t])
   const form = useForm<SettingsFormValues>({
@@ -66,6 +78,7 @@ export default function SettingsPage() {
   })
 
   const handleCreateBackup = async () => {
+    setBackupCooldown(BACKUP_COOLDOWN_SECONDS)
     try {
       await createBackup().unwrap()
       notify.success(t('settings.backupCreated'))
@@ -155,8 +168,15 @@ export default function SettingsPage() {
           title={t('settings.backups')}
           description={t('settings.backupsHint')}
           actions={
-            <Button type="primary" ghost icon={UI_ICONS.plus} onClick={handleCreateBackup} loading={creatingBackup}>
-              {t('settings.createBackup')}
+            <Button
+              type="primary"
+              ghost
+              icon={UI_ICONS.plus}
+              onClick={handleCreateBackup}
+              loading={creatingBackup}
+              disabled={backupCooldown > 0}
+            >
+              {backupCooldown > 0 ? `${t('settings.createBackup')} (${backupCooldown}s)` : t('settings.createBackup')}
             </Button>
           }
         >
