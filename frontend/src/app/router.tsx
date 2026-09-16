@@ -28,6 +28,7 @@ const routes: RouteObject[] = [
           { path: 'accounts', lazy: page(() => import('@/features/accounts/AccountsPage')) },
           { path: 'summary', lazy: page(() => import('@/features/summary/SummaryPage')) },
           { path: 'inventory', lazy: page(() => import('@/features/inventory/InventoryPage')) },
+          { path: 'follow-up', lazy: page(() => import('@/features/follow-up/FollowUpPage')) },
           { path: 'settings', lazy: page(() => import('@/features/settings/SettingsPage')) },
           { path: '*', element: <NotFoundPage /> },
         ],

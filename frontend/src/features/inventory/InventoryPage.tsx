@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Segmented } from 'antd'
+import { Button, Select } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,10 +9,12 @@ import {
   useMarkInventoryItemAvailableMutation,
 } from '@/api/inventoryApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
+import { useDateRange } from '@/lib/hooks/useDateRange'
 import { useNotify } from '@/lib/hooks/useNotify'
 import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { DateRangeFilter } from '@/components/ui/DateRangeFilter'
 import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
 import { InventoryStatusTag } from '@/components/ui/StatusTags'
@@ -25,21 +27,21 @@ import { InventoryItemModal } from './InventoryItemModal'
 import { MarkSoldModal } from './MarkSoldModal'
 import { RecordInventoryPaymentModal } from './RecordInventoryPaymentModal'
 
-type StatusFilter = InventoryItemStatus | 'all'
-
 export default function InventoryPage() {
   const { t, i18n } = useTranslation()
   const notify = useNotify()
 
   const { data: branches } = useGetInventoryBranchesQuery()
-  const [branchId, setBranchId] = useState<string>('all')
-  const [status, setStatus] = useState<StatusFilter>('all')
+  const [branchIds, setBranchIds] = useState<string[]>([])
+  const [statuses, setStatuses] = useState<InventoryItemStatus[]>([])
+  const { value: saleRange, setPreset: setSaleRangePreset, setCustomRange: setSaleCustomRange } = useDateRange('all')
 
   const query = useTableQuery({ sortBy: 'createdAt', sortOrder: 'descend' })
   const { data, isLoading, isFetching } = useGetInventoryItemsQuery({
     ...query.params,
-    branchId: branchId === 'all' ? undefined : branchId,
-    status: status === 'all' ? undefined : status,
+    branchId: branchIds.length ? branchIds.join(',') : undefined,
+    status: statuses.length ? statuses.join(',') : undefined,
+    ...(saleRange.preset === 'all' ? {} : { from: saleRange.from, to: saleRange.to }),
   })
 
   const [deleteItem, { isLoading: deleting }] = useDeleteInventoryItemMutation()
@@ -74,6 +76,7 @@ export default function InventoryPage() {
   const columns: ColumnsType<InventoryItem> = [
     { title: t('inventory.carType'), dataIndex: 'carType', render: (value: string) => <span className="font-medium text-ink">{value}</span> },
     { title: t('inventory.brand'), dataIndex: 'brand', responsive: ['lg'], render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
+    { title: t('inventory.trimLevel'), dataIndex: 'trimLevel', responsive: ['lg'], render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
     {
       title: t('purchases.chassisNumber'),
       dataIndex: 'chassisNumber',
@@ -84,15 +87,21 @@ export default function InventoryPage() {
     { title: t('inventory.color'), dataIndex: 'color', responsive: ['xl'], render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
     { title: t('inventory.branch'), key: 'branch', render: (_, row) => branchLabel(row.branch, i18n.language) },
     { title: t('inventory.traderSellPrice'), dataIndex: 'traderSellPrice', align: 'right', responsive: ['xl'], render: (value: number) => <Money value={value} /> },
-    { title: t('inventory.customerSellPrice'), dataIndex: 'customerSellPrice', align: 'right', render: (value: number) => <Money value={value} strong /> },
+    { title: t('inventory.agreedPrice'), dataIndex: 'agreedPrice', align: 'right', render: (value: number) => <Money value={value} strong /> },
     {
       title: t('inventory.remaining'),
       key: 'remaining',
       align: 'right',
       render: (_, row) =>
-        row.status === 'in_stock' ? <span className="text-subtle">—</span> : <Money value={round2(row.customerSellPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />,
+        row.status === 'in_stock' ? <span className="text-subtle">—</span> : <Money value={round2(row.agreedPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />,
     },
     { title: t('common.status'), dataIndex: 'status', render: (value: InventoryItem['status']) => <InventoryStatusTag status={value} /> },
+    {
+      title: t('inventory.saleDate'),
+      dataIndex: 'saleDate',
+      responsive: ['lg'],
+      render: (value: string | null) => (value ? formatDate(value) : <span className="text-subtle">—</span>),
+    },
     {
       title: t('common.actions'),
       key: 'actions',
@@ -160,17 +169,48 @@ export default function InventoryPage() {
     </Button>
   )
 
-  const branchOptions = [
-    { label: t('common.all'), value: 'all' },
-    ...(branches ?? []).map((branch) => ({ label: branchLabel(branch, i18n.language), value: branch.id })),
+  const branchOptions = (branches ?? []).map((branch) => ({ label: branchLabel(branch, i18n.language), value: branch.id }))
+  const statusOptions = [
+    { value: 'in_stock', label: t('status.in_stock') },
+    { value: 'partial_paid', label: t('status.partial_paid') },
+    { value: 'sold', label: t('status.sold') },
   ]
 
   return (
     <>
-      <PageHeader title={t('inventory.title')} subtitle={t('inventory.subtitle')} actions={addButton} />
+      <PageHeader
+        title={t('inventory.title')}
+        subtitle={t('inventory.subtitle')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">{t('inventory.saleDate')}</span>
+            <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime />
+            {addButton}
+          </div>
+        }
+      />
 
-      <div className="mb-4 overflow-x-auto">
-        <Segmented value={branchId} onChange={(value) => setBranchId(String(value))} options={branchOptions} />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Select
+          mode="multiple"
+          allowClear
+          value={branchIds}
+          onChange={(value) => setBranchIds(value)}
+          options={branchOptions}
+          placeholder={t('inventory.branch')}
+          maxTagCount="responsive"
+          style={{ minWidth: 220 }}
+        />
+        <Select
+          mode="multiple"
+          allowClear
+          value={statuses}
+          onChange={(value) => setStatuses(value as InventoryItemStatus[])}
+          options={statusOptions}
+          placeholder={t('common.status')}
+          maxTagCount="responsive"
+          style={{ minWidth: 220 }}
+        />
       </div>
 
       <DataTable<InventoryItem>
@@ -179,18 +219,6 @@ export default function InventoryPage() {
         data={data}
         loading={isLoading || isFetching}
         query={query}
-        filters={
-          <Segmented
-            value={status}
-            onChange={(value) => setStatus(value as StatusFilter)}
-            options={[
-              { value: 'in_stock', label: t('status.in_stock') },
-              { value: 'partial_paid', label: t('status.partial_paid') },
-              { value: 'sold', label: t('status.sold') },
-              { value: 'all', label: t('common.all') },
-            ]}
-          />
-        }
         rowClassName={(row) => (row.status === 'sold' ? 'row-sold' : row.status === 'partial_paid' ? 'row-warning' : '')}
         searchPlaceholder={`${t('inventory.carType')} · ${t('purchases.chassisNumber')}`}
         empty={{ title: t('inventory.empty'), description: t('inventory.emptyHint'), action: addButton }}
@@ -223,7 +251,7 @@ export default function InventoryPage() {
               <div>
                 <dt className="text-[11px] font-medium tracking-wide text-subtle uppercase">{t('inventory.remaining')}</dt>
                 <dd className="mt-0.5 text-sm text-ink">
-                  <Money value={round2(row.customerSellPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />
+                  <Money value={round2(row.agreedPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />
                 </dd>
               </div>
               {row.saleNotes && (
@@ -240,7 +268,7 @@ export default function InventoryPage() {
       <InventoryItemModal
         open={formOpen}
         item={editing}
-        defaultBranchId={branchId === 'all' ? undefined : branchId}
+        defaultBranchId={branchIds.length === 1 ? branchIds[0] : undefined}
         onClose={() => {
           setFormOpen(false)
           setEditing(null)

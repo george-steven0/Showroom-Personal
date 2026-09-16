@@ -24,6 +24,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
     defaultValues: {
       carType: '',
       brand: '',
+      trimLevel: '',
       chassisNumber: '',
       motorNumber: '',
       modelYear: null,
@@ -32,7 +33,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
       branchId: '',
       buyPrice: null,
       traderSellPrice: 0,
-      customerSellPrice: 0,
+      agreedPrice: 0,
     },
   })
 
@@ -41,6 +42,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
     form.reset({
       carType: item?.carType ?? '',
       brand: item?.brand ?? '',
+      trimLevel: item?.trimLevel ?? '',
       chassisNumber: item?.chassisNumber ?? '',
       motorNumber: item?.motorNumber ?? '',
       modelYear: item?.modelYear ?? null,
@@ -49,7 +51,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
       branchId: item?.branchId ?? defaultBranchId ?? '',
       buyPrice: item?.buyPrice ?? null,
       traderSellPrice: item?.traderSellPrice ?? 0,
-      customerSellPrice: item?.customerSellPrice ?? 0,
+      agreedPrice: item?.agreedPrice ?? 0,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id])
@@ -59,6 +61,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
       const body = {
         ...values,
         brand: values.brand || undefined,
+        trimLevel: values.trimLevel || undefined,
         chassisNumber: values.chassisNumber || undefined,
         motorNumber: values.motorNumber || undefined,
         color: values.color || undefined,
@@ -94,6 +97,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
         <FormRow cols={2}>
           <TextField control={form.control} name="carType" label={t('inventory.carType')} required autoFocus />
           <TextField control={form.control} name="brand" label={t('inventory.brand')} />
+          <TextField control={form.control} name="trimLevel" label={t('inventory.trimLevel')} />
           <BranchSelect control={form.control} name="branchId" label={t('inventory.branch')} required />
           <NumberField control={form.control} name="modelYear" label={t('purchases.modelYear')} precision={0} grouping={false} />
           <TextField control={form.control} name="chassisNumber" label={t('purchases.chassisNumber')} />
@@ -105,7 +109,7 @@ export function InventoryItemModal({ open, item, defaultBranchId, onClose }: { o
           <FormRow cols={3}>
             <NumberField control={form.control} name="buyPrice" label={t('inventory.buyPrice')} precision={2} suffix={DEFAULT_CURRENCY} />
             <NumberField control={form.control} name="traderSellPrice" label={t('inventory.traderSellPrice')} required precision={2} suffix={DEFAULT_CURRENCY} />
-            <NumberField control={form.control} name="customerSellPrice" label={t('inventory.customerSellPrice')} required precision={2} suffix={DEFAULT_CURRENCY} />
+            <NumberField control={form.control} name="agreedPrice" label={t('inventory.agreedPrice')} required precision={2} suffix={DEFAULT_CURRENCY} />
           </FormRow>
         </div>
 

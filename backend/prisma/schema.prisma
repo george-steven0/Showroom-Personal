@@ -264,14 +264,15 @@ model InventoryBranch {
 /// on capital, profit, or any other page in the app.
 ///
 /// status: 'in_stock' | 'partial_paid' | 'sold' — derived from `paidAmount`
-/// vs `customerSellPrice`, never set directly: a buyer with `paidAmount` <
-/// `customerSellPrice` is `partial_paid`; once it reaches the full price the
+/// vs `agreedPrice`, never set directly: a buyer with `paidAmount` <
+/// `agreedPrice` is `partial_paid`; once it reaches the full price the
 /// item flips to `sold`.
 model InventoryItem {
   id String @id @default(cuid())
 
   carType       String
   brand         String?
+  trimLevel     String?
   chassisNumber String?
   motorNumber   String?
   modelYear     Int?
@@ -281,9 +282,9 @@ model InventoryItem {
   branchId String
   branch   InventoryBranch @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
-  buyPrice          Float?
-  traderSellPrice   Float
-  customerSellPrice Float
+  buyPrice        Float?
+  traderSellPrice Float
+  agreedPrice     Float
 
   status     String @default("in_stock")
   paidAmount Float  @default(0)
@@ -305,6 +306,50 @@ model InventoryItem {
   @@index([branchId])
   @@index([status])
   @@map("inventory_items")
+}
+
+/// A potential buyer asking about a car that isn't available yet — a sales
+/// pipeline/CRM-lite list, completely separate from every other model here:
+/// never touches `CashTransaction`, `InventoryItem`, or anything else.
+///
+/// rating: 'very_likely' | 'medium' | 'unlikely' — never set to anything
+/// other than 'very_likely' once `downPayment` is positive (enforced in the
+/// service layer, not just the UI): a client who already paid something
+/// down is by definition a strong lead.
+///
+/// status: 'following_up' | 'converted' | 'lost'
+model FollowUpClient {
+  id String @id @default(cuid())
+
+  clientName String
+  phone      String
+  address    String
+
+  carType   String
+  carModel  String?
+  modelYear Int
+  color     String
+
+  agreedPrice Float?
+  downPayment Float?
+
+  rating String @default("medium")
+  status String @default("following_up")
+
+  notes            String?
+  nextFollowUpDate DateTime?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@index([rating])
+  @@index([status])
+  @@index([createdAt])
+  @@map("follow_up_clients")
 }
 
 /// Singleton row (`id` is hardcoded to `"singleton"`, enforced only at the

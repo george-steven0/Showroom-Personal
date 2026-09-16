@@ -14,13 +14,13 @@ const SORTABLE_FIELDS: Record<string, string> = {
   carType: 'carType',
   modelYear: 'modelYear',
   traderSellPrice: 'traderSellPrice',
-  customerSellPrice: 'customerSellPrice',
+  agreedPrice: 'agreedPrice',
   createdAt: 'createdAt',
 }
 
-/** A car counts as fully `sold` only once the buyer has paid the full customer price — never set by hand. */
-function resolveStatus(paidAmount: number, customerSellPrice: number): 'partial_paid' | 'sold' {
-  return paidAmount >= customerSellPrice ? 'sold' : 'partial_paid'
+/** A car counts as fully `sold` only once the buyer has paid the full agreed price — never set by hand. */
+function resolveStatus(paidAmount: number, agreedPrice: number): 'partial_paid' | 'sold' {
+  return paidAmount >= agreedPrice ? 'sold' : 'partial_paid'
 }
 
 @Injectable()
@@ -28,9 +28,13 @@ export class InventoryItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(query: ListInventoryItemsQueryDto) {
+    const branchIds = query.branchId ? query.branchId.split(',').filter(Boolean) : []
+    const statuses = query.status ? query.status.split(',').filter(Boolean) : []
+
     const where: Prisma.InventoryItemWhereInput = {
-      ...(query.branchId ? { branchId: query.branchId } : {}),
-      ...(query.status ? { status: query.status } : {}),
+      ...(branchIds.length ? { branchId: { in: branchIds } } : {}),
+      ...(statuses.length ? { status: { in: statuses } } : {}),
+      ...(query.from && query.to ? { saleDate: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
       ...(query.search
         ? {
             OR: [
@@ -83,12 +87,12 @@ export class InventoryItemsService {
     const item = await this.findOrThrow(id)
     if (item.status !== 'in_stock') throw new BadRequestException('This car already has a buyer recorded')
 
-    const paidAmount = round2(Math.min(dto.paidAmount, item.customerSellPrice))
+    const paidAmount = round2(Math.min(dto.paidAmount, item.agreedPrice))
 
     return this.prisma.inventoryItem.update({
       where: { id },
       data: {
-        status: resolveStatus(paidAmount, item.customerSellPrice),
+        status: resolveStatus(paidAmount, item.agreedPrice),
         paidAmount,
         buyerName: dto.buyerName,
         buyerPhone: dto.buyerPhone,
@@ -110,13 +114,13 @@ export class InventoryItemsService {
     if (item.status === 'in_stock') throw new BadRequestException('Record the sale first before recording a payment')
     if (item.status === 'sold') throw new BadRequestException('This car is already fully paid')
 
-    const paidAmount = round2(Math.min(item.paidAmount + dto.amount, item.customerSellPrice))
+    const paidAmount = round2(Math.min(item.paidAmount + dto.amount, item.agreedPrice))
 
     return this.prisma.inventoryItem.update({
       where: { id },
       data: {
         paidAmount,
-        status: resolveStatus(paidAmount, item.customerSellPrice),
+        status: resolveStatus(paidAmount, item.agreedPrice),
         updatedAt: new Date(),
         updatedBy: user.id,
         updatedByName: user.fullName,

@@ -111,6 +111,7 @@ export function inventoryItemSchema(t: TFunction) {
   return z.object({
     carType: z.string().trim().min(1, t('validation.carTypeRequired')),
     brand: z.string().trim().optional(),
+    trimLevel: z.string().trim().optional(),
     chassisNumber: z.string().trim().optional(),
     motorNumber: z.string().trim().optional(),
     modelYear: z
@@ -125,7 +126,7 @@ export function inventoryItemSchema(t: TFunction) {
     branchId: z.string().min(1, t('validation.branchRequired')),
     buyPrice: z.number().min(0, t('validation.amountNonNegative')).nullable().optional(),
     traderSellPrice: z.number({ message: t('validation.pricePositive') }).positive(t('validation.pricePositive')),
-    customerSellPrice: z.number({ message: t('validation.pricePositive') }).positive(t('validation.pricePositive')),
+    agreedPrice: z.number({ message: t('validation.pricePositive') }).positive(t('validation.pricePositive')),
   })
 }
 
@@ -157,6 +158,32 @@ export function recordInventoryPaymentSchema(t: TFunction, maxAmount: number, fo
   })
 }
 
+export function followUpClientSchema(t: TFunction) {
+  return z.object({
+    clientName: z.string().trim().min(1, t('validation.nameRequired')),
+    phone: z
+      .string()
+      .trim()
+      .min(1, t('validation.phoneRequired'))
+      .refine((value) => PHONE_RE.test(value), t('validation.phoneInvalid')),
+    address: z.string().trim().min(1, t('validation.addressRequired')),
+    carType: z.string().trim().min(1, t('validation.carTypeRequired')),
+    carModel: z.string().trim().optional(),
+    modelYear: z
+      .number({ message: t('validation.yearInvalid', { max: CURRENT_YEAR }) })
+      .int()
+      .min(1950, t('validation.yearInvalid', { max: CURRENT_YEAR }))
+      .max(CURRENT_YEAR, t('validation.yearInvalid', { max: CURRENT_YEAR })),
+    color: z.string().trim().min(1, t('validation.colorRequired')),
+    agreedPrice: z.number().min(0, t('validation.amountNonNegative')).nullable().optional(),
+    downPayment: z.number().min(0, t('validation.amountNonNegative')).nullable().optional(),
+    rating: z.enum(['very_likely', 'medium', 'unlikely']),
+    status: z.enum(['following_up', 'converted', 'lost']),
+    notes: z.string().trim().optional(),
+    nextFollowUpDate: z.string().nullable().optional(),
+  })
+}
+
 export function settingsSchema(t: TFunction) {
   return z.object({
     systemName: z.string().trim().min(2, t('validation.systemNameRequired')),
@@ -177,3 +204,4 @@ export type SettingsFormValues = z.infer<ReturnType<typeof settingsSchema>>
 export type InventoryItemFormValues = z.infer<ReturnType<typeof inventoryItemSchema>>
 export type MarkSoldFormValues = z.infer<ReturnType<typeof markSoldSchema>>
 export type RecordInventoryPaymentFormValues = z.infer<ReturnType<typeof recordInventoryPaymentSchema>>
+export type FollowUpClientFormValues = z.infer<ReturnType<typeof followUpClientSchema>>

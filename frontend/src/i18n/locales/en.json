@@ -24,6 +24,7 @@
     "accounts": "Accounts",
     "summary": "Summary",
     "inventory": "Inventory",
+    "followUp": "Follow Up",
     "settings": "Settings",
     "collapse": "Collapse sidebar",
     "expand": "Open menu"
@@ -83,7 +84,10 @@
     "exceedsOwed": "Cannot exceed the remaining owed amount ({{amount}})",
     "systemNameRequired": "System name is required",
     "carTypeRequired": "Car type is required",
-    "branchRequired": "Branch is required"
+    "branchRequired": "Branch is required",
+    "phoneRequired": "Phone number is required",
+    "addressRequired": "Address is required",
+    "colorRequired": "Color is required"
   },
   "messages": {
     "saveFailed": "Could not save. Please try again.",
@@ -105,7 +109,10 @@
     "inventoryItemSaved": "Car added to inventory",
     "inventoryItemUpdated": "Inventory car updated",
     "inventoryItemDeleted": "Inventory car deleted",
-    "inventoryItemMarkedSold": "Marked as sold"
+    "inventoryItemMarkedSold": "Marked as sold",
+    "followUpClientSaved": "Client added",
+    "followUpClientUpdated": "Client updated",
+    "followUpClientDeleted": "Client deleted"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -199,6 +206,7 @@
     "editItemTitle": "Edit inventory car",
     "carType": "Car type",
     "brand": "Brand",
+    "trimLevel": "Trim level",
     "color": "Color",
     "branch": "Branch",
     "selectBranch": "Select branch",
@@ -215,7 +223,7 @@
     "branchDeleteFailed": "Could not delete this branch — it may still have cars logged against it.",
     "buyPrice": "Buy price",
     "traderSellPrice": "Trader sell price",
-    "customerSellPrice": "Customer sell price",
+    "agreedPrice": "Agreed price",
     "markSold": "Mark sold",
     "markSoldTitle": "Mark car as sold",
     "confirmSold": "Mark as sold",
@@ -223,7 +231,7 @@
     "markedAvailable": "Marked as available again",
     "saleDate": "Sale date",
     "paidAmount": "Paid amount",
-    "paidAmountHint": "Fills in with the full customer price automatically — lower it if the buyer only paid part of it.",
+    "paidAmountHint": "Fills in with the full agreed price automatically — lower it if the buyer only paid part of it.",
     "remaining": "Remaining",
     "recordPayment": "Record payment",
     "recordPaymentTitle": "Record a payment",
@@ -232,6 +240,35 @@
     "deleteItemBody": "This will permanently delete \"{{name}}\" from the inventory log.",
     "empty": "No cars logged yet",
     "emptyHint": "Add a car to start tracking stock at your branches."
+  },
+  "followUp": {
+    "title": "Follow Up",
+    "subtitle": "Potential clients asking about cars that aren't ready yet — separate from the rest of the app.",
+    "addClient": "Add client",
+    "addClientTitle": "Add a client to follow up",
+    "editClientTitle": "Edit follow-up client",
+    "clientName": "Client name",
+    "carType": "Car type",
+    "carModel": "Car model",
+    "agreedPrice": "Agreed price",
+    "downPayment": "Down payment",
+    "ratingLabel": "Likelihood to buy",
+    "ratingAutoHint": "Set to \"Very likely\" automatically because a down payment was recorded.",
+    "rating": {
+      "very_likely": "Very likely",
+      "medium": "Medium",
+      "unlikely": "Unlikely"
+    },
+    "status": {
+      "following_up": "Following up",
+      "converted": "Converted",
+      "lost": "Lost"
+    },
+    "nextFollowUpDate": "Next follow-up date",
+    "deleteClientTitle": "Delete this client?",
+    "deleteClientBody": "This will permanently delete \"{{name}}\" from the follow-up list.",
+    "empty": "No clients yet",
+    "emptyHint": "Add a client to start following up on cars they're waiting for."
   },
   "accounts": {
     "title": "Accounts",

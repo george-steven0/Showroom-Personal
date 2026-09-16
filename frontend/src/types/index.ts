@@ -240,6 +240,7 @@ export interface InventoryItem {
   id: string
   carType: string
   brand: string | null
+  trimLevel: string | null
   chassisNumber: string | null
   motorNumber: string | null
   modelYear: number | null
@@ -249,7 +250,7 @@ export interface InventoryItem {
   branch: InventoryBranch
   buyPrice: number | null
   traderSellPrice: number
-  customerSellPrice: number
+  agreedPrice: number
   status: InventoryItemStatus
   paidAmount: number
   buyerName: string | null
@@ -258,6 +259,32 @@ export interface InventoryItem {
   saleNotes: string | null
   saleDate: string | null
   soldAt: string | null
+  createdAt: string
+  createdBy: string
+  createdByName: string
+  updatedAt: string | null
+  updatedBy: string | null
+  updatedByName: string | null
+}
+
+export type FollowUpRating = 'very_likely' | 'medium' | 'unlikely'
+export type FollowUpStatus = 'following_up' | 'converted' | 'lost'
+
+export interface FollowUpClient {
+  id: string
+  clientName: string
+  phone: string
+  address: string
+  carType: string
+  carModel: string | null
+  modelYear: number
+  color: string
+  agreedPrice: number | null
+  downPayment: number | null
+  rating: FollowUpRating
+  status: FollowUpStatus
+  notes: string | null
+  nextFollowUpDate: string | null
   createdAt: string
   createdBy: string
   createdByName: string

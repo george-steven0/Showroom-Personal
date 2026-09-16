@@ -302,6 +302,9 @@ textarea,
 .row-warning > td {
   background-color: var(--sr-warning-soft) !important;
 }
+.row-success > td {
+  background-color: var(--sr-success-soft) !important;
+}
 .row-sold > td {
   background-color: var(--sr-neutral-soft) !important;
 }

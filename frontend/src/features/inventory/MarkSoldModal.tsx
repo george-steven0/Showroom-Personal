@@ -16,7 +16,7 @@ export function MarkSoldModal({ open, item, onClose }: { open: boolean; item: In
   const notify = useNotify()
   const [markSold, { isLoading }] = useMarkInventoryItemSoldMutation()
 
-  const maxAmount = item?.customerSellPrice ?? 0
+  const maxAmount = item?.agreedPrice ?? 0
   const schema = useMemo(() => markSoldSchema(t, maxAmount, formatMoney(maxAmount)), [t, maxAmount])
   const form = useForm<MarkSoldFormValues>({
     resolver: zodResolver(schema),
@@ -25,7 +25,7 @@ export function MarkSoldModal({ open, item, onClose }: { open: boolean; item: In
 
   useEffect(() => {
     if (!open) return
-    form.reset({ buyerName: '', buyerPhone: '', buyerAddress: '', saleNotes: '', saleDate: todayIso(), paidAmount: item?.customerSellPrice ?? 0 })
+    form.reset({ buyerName: '', buyerPhone: '', buyerAddress: '', saleNotes: '', saleDate: todayIso(), paidAmount: item?.agreedPrice ?? 0 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id])
 

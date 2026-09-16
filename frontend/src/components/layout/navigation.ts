@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
   { key: 'accounts', path: '/accounts', labelKey: 'nav.accounts', icon: 'wallet' },
   { key: 'summary', path: '/summary', labelKey: 'nav.summary', icon: 'chart' },
   { key: 'inventory', path: '/inventory', labelKey: 'nav.inventory', icon: 'box' },
+  { key: 'followUp', path: '/follow-up', labelKey: 'nav.followUp', icon: 'phoneCall' },
   { key: 'settings', path: '/settings', labelKey: 'nav.settings', icon: 'gear' },
 ]
 
@@ -28,5 +29,6 @@ export const ROUTE_TITLES: { prefix: string; labelKey: string }[] = [
   { prefix: '/accounts', labelKey: 'nav.accounts' },
   { prefix: '/summary', labelKey: 'nav.summary' },
   { prefix: '/inventory', labelKey: 'nav.inventory' },
+  { prefix: '/follow-up', labelKey: 'nav.followUp' },
   { prefix: '/settings', labelKey: 'nav.settings' },
 ]

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from './primitives'
-import type { BillStatus, CashTransactionType, InventoryItemStatus, PurchaseLineStatus } from '@/types'
+import type { BillStatus, CashTransactionType, FollowUpRating, FollowUpStatus, InventoryItemStatus, PurchaseLineStatus } from '@/types'
 
 export function BillStatusTag({ status }: { status: BillStatus }) {
   const { t } = useTranslation()
@@ -21,6 +21,28 @@ const INVENTORY_STATUS_TONE: Record<InventoryItemStatus, 'info' | 'warning' | 's
 export function InventoryStatusTag({ status }: { status: InventoryItemStatus }) {
   const { t } = useTranslation()
   return <StatusBadge tone={INVENTORY_STATUS_TONE[status]}>{t(`status.${status}`)}</StatusBadge>
+}
+
+const RATING_TONE: Record<FollowUpRating, 'success' | 'warning' | 'neutral'> = {
+  very_likely: 'success',
+  medium: 'warning',
+  unlikely: 'neutral',
+}
+
+export function FollowUpRatingTag({ rating }: { rating: FollowUpRating }) {
+  const { t } = useTranslation()
+  return <StatusBadge tone={RATING_TONE[rating]}>{t(`followUp.rating.${rating}`)}</StatusBadge>
+}
+
+const FOLLOW_UP_STATUS_TONE: Record<FollowUpStatus, 'info' | 'success' | 'danger'> = {
+  following_up: 'info',
+  converted: 'success',
+  lost: 'danger',
+}
+
+export function FollowUpStatusTag({ status }: { status: FollowUpStatus }) {
+  const { t } = useTranslation()
+  return <StatusBadge tone={FOLLOW_UP_STATUS_TONE[status]}>{t(`followUp.status.${status}`)}</StatusBadge>
 }
 
 const TX_TONE: Record<CashTransactionType, 'success' | 'danger' | 'warning' | 'primary'> = {

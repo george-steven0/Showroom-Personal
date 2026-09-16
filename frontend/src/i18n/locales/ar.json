@@ -24,6 +24,7 @@
     "accounts": "الحسابات",
     "summary": "الملخص",
     "inventory": "الجرد",
+    "followUp": "المتابعة",
     "settings": "الإعدادات",
     "collapse": "طي القائمة الجانبية",
     "expand": "فتح القائمة"
@@ -83,7 +84,10 @@
     "exceedsOwed": "لا يمكن أن يتجاوز المبلغ المتبقي ({{amount}})",
     "systemNameRequired": "اسم النظام مطلوب",
     "carTypeRequired": "نوع السيارة مطلوب",
-    "branchRequired": "الفرع مطلوب"
+    "branchRequired": "الفرع مطلوب",
+    "phoneRequired": "رقم الهاتف مطلوب",
+    "addressRequired": "العنوان مطلوب",
+    "colorRequired": "اللون مطلوب"
   },
   "messages": {
     "saveFailed": "تعذر الحفظ. الرجاء المحاولة مرة أخرى.",
@@ -105,7 +109,10 @@
     "inventoryItemSaved": "تمت إضافة السيارة إلى الجرد",
     "inventoryItemUpdated": "تم تحديث سيارة الجرد",
     "inventoryItemDeleted": "تم حذف سيارة الجرد",
-    "inventoryItemMarkedSold": "تم تحديدها كمباعة"
+    "inventoryItemMarkedSold": "تم تحديدها كمباعة",
+    "followUpClientSaved": "تمت إضافة العميل",
+    "followUpClientUpdated": "تم تحديث بيانات العميل",
+    "followUpClientDeleted": "تم حذف العميل"
   },
   "suppliers": {
     "title": "الموردون",
@@ -199,6 +206,7 @@
     "editItemTitle": "تعديل سيارة الجرد",
     "carType": "نوع السيارة",
     "brand": "الماركة",
+    "trimLevel": "فئة السيارة",
     "color": "اللون",
     "branch": "الفرع",
     "selectBranch": "اختر الفرع",
@@ -215,7 +223,7 @@
     "branchDeleteFailed": "تعذر حذف هذا الفرع — قد يكون به سيارات مسجلة.",
     "buyPrice": "سعر الشراء",
     "traderSellPrice": "سعر بيع التاجر",
-    "customerSellPrice": "سعر بيع العميل",
+    "agreedPrice": "السعر المتفق عليه",
     "markSold": "تحديد كمباعة",
     "markSoldTitle": "تحديد السيارة كمباعة",
     "confirmSold": "تحديد كمباعة",
@@ -223,7 +231,7 @@
     "markedAvailable": "تمت إعادتها كمتاحة",
     "saleDate": "تاريخ البيع",
     "paidAmount": "المبلغ المدفوع",
-    "paidAmountHint": "يُملأ تلقائياً بسعر بيع العميل بالكامل — قلّله إذا دفع المشتري جزءاً منه فقط.",
+    "paidAmountHint": "يُملأ تلقائياً بالسعر المتفق عليه بالكامل — قلّله إذا دفع المشتري جزءاً منه فقط.",
     "remaining": "المتبقي",
     "recordPayment": "تسجيل دفعة",
     "recordPaymentTitle": "تسجيل دفعة",
@@ -232,6 +240,35 @@
     "deleteItemBody": "سيتم حذف \"{{name}}\" نهائياً من سجل الجرد.",
     "empty": "لا توجد سيارات مسجلة بعد",
     "emptyHint": "أضف سيارة لبدء تتبع المخزون في فروعك."
+  },
+  "followUp": {
+    "title": "المتابعة",
+    "subtitle": "عملاء محتملون يسألون عن سيارات غير متوفرة بعد — منفصل عن باقي النظام.",
+    "addClient": "إضافة عميل",
+    "addClientTitle": "إضافة عميل للمتابعة",
+    "editClientTitle": "تعديل بيانات العميل",
+    "clientName": "اسم العميل",
+    "carType": "نوع السيارة",
+    "carModel": "موديل السيارة",
+    "agreedPrice": "السعر المتفق عليه",
+    "downPayment": "الدفعة المقدمة",
+    "ratingLabel": "احتمالية الشراء",
+    "ratingAutoHint": "تم تحديدها تلقائياً كـ \"مرجح جداً\" لوجود دفعة مقدمة مسجّلة.",
+    "rating": {
+      "very_likely": "مرجح جداً",
+      "medium": "متوسط",
+      "unlikely": "غير مرجح"
+    },
+    "status": {
+      "following_up": "قيد المتابعة",
+      "converted": "تم الشراء",
+      "lost": "فقد الاهتمام"
+    },
+    "nextFollowUpDate": "تاريخ المتابعة القادمة",
+    "deleteClientTitle": "حذف هذا العميل؟",
+    "deleteClientBody": "سيتم حذف \"{{name}}\" نهائياً من قائمة المتابعة.",
+    "empty": "لا يوجد عملاء بعد",
+    "emptyHint": "أضف عميلاً لبدء متابعة السيارات التي ينتظرونها."
   },
   "accounts": {
     "title": "الحسابات",

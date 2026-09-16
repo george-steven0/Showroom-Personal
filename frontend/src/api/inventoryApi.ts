@@ -4,6 +4,7 @@ import type { InventoryBranch, InventoryItem, ListQuery, Paginated } from '@/typ
 export interface InventoryItemPayload {
   carType: string
   brand?: string
+  trimLevel?: string
   chassisNumber?: string
   motorNumber?: string
   modelYear?: number | null
@@ -12,7 +13,7 @@ export interface InventoryItemPayload {
   branchId: string
   buyPrice?: number | null
   traderSellPrice: number
-  customerSellPrice: number
+  agreedPrice: number
 }
 
 export interface MarkSoldPayload {

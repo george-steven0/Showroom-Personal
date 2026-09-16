@@ -14,6 +14,10 @@ export class CreateInventoryItemDto {
 
   @IsOptional()
   @IsString()
+  trimLevel?: string
+
+  @IsOptional()
+  @IsString()
   chassisNumber?: string
 
   @IsOptional()
@@ -53,5 +57,5 @@ export class CreateInventoryItemDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  customerSellPrice!: number
+  agreedPrice!: number
 }

@@ -16,7 +16,7 @@ export function RecordInventoryPaymentModal({ open, item, onClose }: { open: boo
   const notify = useNotify()
   const [recordPayment, { isLoading }] = useRecordInventoryPaymentMutation()
 
-  const remaining = item ? round2(item.customerSellPrice - item.paidAmount) : 0
+  const remaining = item ? round2(item.agreedPrice - item.paidAmount) : 0
   const schema = useMemo(() => recordInventoryPaymentSchema(t, remaining, formatMoney(remaining)), [t, remaining])
   const form = useForm<RecordInventoryPaymentFormValues>({
     resolver: zodResolver(schema),
