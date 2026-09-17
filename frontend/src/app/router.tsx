@@ -24,6 +24,7 @@ const routes: RouteObject[] = [
           { path: 'buying-bills/:id/edit', lazy: page(() => import('@/features/purchases/PurchaseBillFormPage')) },
           { path: 'selling-bills', lazy: page(() => import('@/features/sales/SellingBillsPage')) },
           { path: 'selling-bills/new', lazy: page(() => import('@/features/sales/SellingBillFormPage')) },
+          { path: 'selling-bills/:id/edit', lazy: page(() => import('@/features/sales/SellingBillFormPage')) },
           { path: 'stock', lazy: page(() => import('@/features/stock/StockPage')) },
           { path: 'accounts', lazy: page(() => import('@/features/accounts/AccountsPage')) },
           { path: 'summary', lazy: page(() => import('@/features/summary/SummaryPage')) },

@@ -75,6 +75,10 @@ export const inventoryApi = baseApi.injectEndpoints({
       query: ({ id, body }) => ({ url: `/inventory/items/${id}/mark-sold`, method: 'POST', body }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'InventoryItem', id }, { type: 'InventoryItem', id: 'LIST' }],
     }),
+    updateInventorySale: builder.mutation<InventoryItem, { id: string; body: MarkSoldPayload }>({
+      query: ({ id, body }) => ({ url: `/inventory/items/${id}/sale`, method: 'PATCH', body }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'InventoryItem', id }, { type: 'InventoryItem', id: 'LIST' }],
+    }),
     markInventoryItemAvailable: builder.mutation<InventoryItem, string>({
       query: (id) => ({ url: `/inventory/items/${id}/mark-available`, method: 'POST' }),
       invalidatesTags: (_result, _error, id) => [{ type: 'InventoryItem', id }, { type: 'InventoryItem', id: 'LIST' }],
@@ -96,6 +100,7 @@ export const {
   useUpdateInventoryItemMutation,
   useDeleteInventoryItemMutation,
   useMarkInventoryItemSoldMutation,
+  useUpdateInventorySaleMutation,
   useMarkInventoryItemAvailableMutation,
   useRecordInventoryPaymentMutation,
 } = inventoryApi

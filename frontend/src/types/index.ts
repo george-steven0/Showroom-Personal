@@ -234,7 +234,7 @@ export interface InventoryBranch {
   createdByName: string
 }
 
-export type InventoryItemStatus = 'in_stock' | 'partial_paid' | 'sold'
+export type InventoryItemStatus = 'in_stock' | 'partial_paid' | 'sold' | 'exceeded'
 
 export interface InventoryItem {
   id: string

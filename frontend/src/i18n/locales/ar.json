@@ -99,6 +99,7 @@
     "purchaseUpdated": "تم تحديث فاتورة الشراء",
     "purchaseCancelled": "تم إلغاء فاتورة الشراء",
     "sellingSaved": "تم حفظ فاتورة البيع",
+    "sellingUpdated": "تم تحديث فاتورة البيع",
     "sellingCancelled": "تم إلغاء فاتورة البيع",
     "expenseSaved": "تمت إضافة المصروف",
     "expenseUpdated": "تم تحديث المصروف",
@@ -110,6 +111,7 @@
     "inventoryItemUpdated": "تم تحديث سيارة الجرد",
     "inventoryItemDeleted": "تم حذف سيارة الجرد",
     "inventoryItemMarkedSold": "تم تحديدها كمباعة",
+    "inventorySaleUpdated": "تم تحديث عملية البيع",
     "followUpClientSaved": "تمت إضافة العميل",
     "followUpClientUpdated": "تم تحديث بيانات العميل",
     "followUpClientDeleted": "تم حذف العميل"
@@ -226,13 +228,16 @@
     "agreedPrice": "السعر المتفق عليه",
     "markSold": "تحديد كمباعة",
     "markSoldTitle": "تحديد السيارة كمباعة",
+    "editSale": "تعديل عملية البيع",
+    "editSaleTitle": "تعديل عملية البيع",
     "confirmSold": "تحديد كمباعة",
     "markAvailable": "إعادتها كمتاحة",
     "markedAvailable": "تمت إعادتها كمتاحة",
     "saleDate": "تاريخ البيع",
     "paidAmount": "المبلغ المدفوع",
-    "paidAmountHint": "يُملأ تلقائياً بالسعر المتفق عليه بالكامل — قلّله إذا دفع المشتري جزءاً منه فقط.",
+    "paidAmountHint": "يُملأ تلقائياً بالسعر المتفق عليه بالكامل — قلّله لدفعة جزئية، أو زِده إذا كان المشتري يدفع مبلغاً إضافياً كدفعة مقدمة لسيارة أخرى مستقبلاً.",
     "remaining": "المتبقي",
+    "advance": "دفعة مقدمة",
     "recordPayment": "تسجيل دفعة",
     "recordPaymentTitle": "تسجيل دفعة",
     "recordPaymentHint": "عن {{item}} · المتبقي: {{amount}}",
@@ -372,7 +377,8 @@
     "cancelled": "ملغاة",
     "in_stock": "بالمخزون",
     "partial_paid": "مدفوعة جزئياً",
-    "sold": "مباعة"
+    "sold": "مباعة",
+    "exceeded": "دفع زائد"
   },
   "settings": {
     "title": "الإعدادات",

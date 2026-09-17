@@ -18,9 +18,13 @@ const SORTABLE_FIELDS: Record<string, string> = {
   createdAt: 'createdAt',
 }
 
-/** A car counts as fully `sold` only once the buyer has paid the full agreed price — never set by hand. */
-function resolveStatus(paidAmount: number, agreedPrice: number): 'partial_paid' | 'sold' {
-  return paidAmount >= agreedPrice ? 'sold' : 'partial_paid'
+/**
+ * A car counts as fully `sold` once the buyer has paid the full agreed price, or `exceeded` if they've
+ * paid more than that — a buyer sometimes pays extra as an advance toward a future car. Never set by hand.
+ */
+function resolveStatus(paidAmount: number, agreedPrice: number): 'partial_paid' | 'sold' | 'exceeded' {
+  if (paidAmount > agreedPrice) return 'exceeded'
+  return paidAmount === agreedPrice ? 'sold' : 'partial_paid'
 }
 
 @Injectable()
@@ -43,6 +47,7 @@ export class InventoryItemsService {
               { chassisNumber: { contains: query.search } },
               { motorNumber: { contains: query.search } },
               { color: { contains: query.search } },
+              { buyerName: { contains: query.search } },
             ],
           }
         : {}),
@@ -87,7 +92,7 @@ export class InventoryItemsService {
     const item = await this.findOrThrow(id)
     if (item.status !== 'in_stock') throw new BadRequestException('This car already has a buyer recorded')
 
-    const paidAmount = round2(Math.min(dto.paidAmount, item.agreedPrice))
+    const paidAmount = round2(dto.paidAmount)
 
     return this.prisma.inventoryItem.update({
       where: { id },
@@ -108,13 +113,43 @@ export class InventoryItemsService {
     })
   }
 
+  /**
+   * Corrects an already-recorded sale (wrong buyer info or amount typed in) without unselling and reselling
+   * the car — that round trip would wipe the buyer record and force re-entry. Replaces the sale fields
+   * outright (unlike `recordPayment`, which only adds to what's already paid) and recomputes status from
+   * the new `paidAmount`, so it works the same whether the car is `partial_paid`, `sold` or `exceeded`.
+   */
+  async updateSale(id: string, dto: MarkSoldDto, user: RequestUser) {
+    const item = await this.findOrThrow(id)
+    if (item.status === 'in_stock') throw new BadRequestException('Record the sale first before editing it')
+
+    const paidAmount = round2(dto.paidAmount)
+
+    return this.prisma.inventoryItem.update({
+      where: { id },
+      data: {
+        status: resolveStatus(paidAmount, item.agreedPrice),
+        paidAmount,
+        buyerName: dto.buyerName,
+        buyerPhone: dto.buyerPhone,
+        buyerAddress: dto.buyerAddress,
+        saleNotes: dto.saleNotes,
+        saleDate: dto.saleDate ? new Date(dto.saleDate) : item.saleDate,
+        updatedAt: new Date(),
+        updatedBy: user.id,
+        updatedByName: user.fullName,
+      },
+      include: { branch: true },
+    })
+  }
+
   /** Tops up an existing partial payment — only while the car isn't already fully paid. */
   async recordPayment(id: string, dto: RecordInventoryPaymentDto, user: RequestUser) {
     const item = await this.findOrThrow(id)
     if (item.status === 'in_stock') throw new BadRequestException('Record the sale first before recording a payment')
-    if (item.status === 'sold') throw new BadRequestException('This car is already fully paid')
+    if (item.status !== 'partial_paid') throw new BadRequestException('This car is already fully paid')
 
-    const paidAmount = round2(Math.min(item.paidAmount + dto.amount, item.agreedPrice))
+    const paidAmount = round2(item.paidAmount + dto.amount)
 
     return this.prisma.inventoryItem.update({
       where: { id },

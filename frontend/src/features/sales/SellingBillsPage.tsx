@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button, Drawer } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +23,7 @@ import { SellingBillPrint } from './SellingBillPrint'
 
 export default function SellingBillsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const notify = useNotify()
 
   const query = useTableQuery({ sortBy: 'sellingDate', sortOrder: 'descend' })
@@ -78,6 +79,13 @@ export default function SellingBillsPage() {
         <RowActions
           actions={[
             { key: 'view', label: t('common.view'), icon: ACTION_ICONS.view, onClick: () => setViewing(row) },
+            {
+              key: 'edit',
+              label: t('common.edit'),
+              icon: ACTION_ICONS.edit,
+              hidden: row.status !== 'active',
+              onClick: () => navigate(`/selling-bills/${row.id}/edit`),
+            },
             { key: 'cancel', label: t('common.delete'), icon: ACTION_ICONS.delete, danger: true, hidden: row.status === 'cancelled', onClick: () => setTarget(row) },
           ]}
         />

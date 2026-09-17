@@ -17,7 +17,7 @@ export function RecordInventoryPaymentModal({ open, item, onClose }: { open: boo
   const [recordPayment, { isLoading }] = useRecordInventoryPaymentMutation()
 
   const remaining = item ? round2(item.agreedPrice - item.paidAmount) : 0
-  const schema = useMemo(() => recordInventoryPaymentSchema(t, remaining, formatMoney(remaining)), [t, remaining])
+  const schema = useMemo(() => recordInventoryPaymentSchema(t), [t])
   const form = useForm<RecordInventoryPaymentFormValues>({
     resolver: zodResolver(schema),
     defaultValues: { amount: 0, date: todayIso() },
@@ -55,7 +55,7 @@ export function RecordInventoryPaymentModal({ open, item, onClose }: { open: boo
         <form onSubmit={onSubmit} className="pt-2" noValidate>
           <p className="mb-4 text-sm text-muted">{t('inventory.recordPaymentHint', { item: item.carType, amount: formatMoney(remaining) })}</p>
           <FormRow cols={1}>
-            <NumberField control={form.control} name="amount" label={t('common.amount')} required min={0} max={remaining} precision={2} suffix={DEFAULT_CURRENCY} autoFocus />
+            <NumberField control={form.control} name="amount" label={t('common.amount')} required min={0} precision={2} suffix={DEFAULT_CURRENCY} autoFocus />
             <DateField control={form.control} name="date" label={t('common.date')} required maxToday />
           </FormRow>
         </form>

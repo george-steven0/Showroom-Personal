@@ -27,6 +27,20 @@ import { InventoryItemModal } from './InventoryItemModal'
 import { MarkSoldModal } from './MarkSoldModal'
 import { RecordInventoryPaymentModal } from './RecordInventoryPaymentModal'
 
+const ROW_CLASS: Record<InventoryItemStatus, string> = {
+  in_stock: '',
+  partial_paid: 'row-warning',
+  sold: 'row-sold',
+  exceeded: 'row-accent',
+}
+
+/** "Remaining" reads as still-owed for partial_paid/sold, but flips meaning for exceeded — the buyer overpaid, so it's shown as their advance credit instead of a negative balance. */
+function renderBalance(row: InventoryItem) {
+  if (row.status === 'in_stock') return <span className="text-subtle">—</span>
+  if (row.status === 'exceeded') return <Money value={round2(row.paidAmount - row.agreedPrice)} className="text-accent" strong />
+  return <Money value={round2(row.agreedPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />
+}
+
 export default function InventoryPage() {
   const { t, i18n } = useTranslation()
   const notify = useNotify()
@@ -92,8 +106,7 @@ export default function InventoryPage() {
       title: t('inventory.remaining'),
       key: 'remaining',
       align: 'right',
-      render: (_, row) =>
-        row.status === 'in_stock' ? <span className="text-subtle">—</span> : <Money value={round2(row.agreedPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />,
+      render: (_, row) => renderBalance(row),
     },
     { title: t('common.status'), dataIndex: 'status', render: (value: InventoryItem['status']) => <InventoryStatusTag status={value} /> },
     {
@@ -132,6 +145,13 @@ export default function InventoryPage() {
           )}
           <RowActions
             actions={[
+              {
+                key: 'edit-sale',
+                label: t('inventory.editSale'),
+                icon: ACTION_ICONS.cash,
+                hidden: row.status === 'in_stock',
+                onClick: () => setSelling(row),
+              },
               {
                 key: 'unsell',
                 label: t('inventory.markAvailable'),
@@ -174,6 +194,7 @@ export default function InventoryPage() {
     { value: 'in_stock', label: t('status.in_stock') },
     { value: 'partial_paid', label: t('status.partial_paid') },
     { value: 'sold', label: t('status.sold') },
+    { value: 'exceeded', label: t('status.exceeded') },
   ]
 
   return (
@@ -219,8 +240,8 @@ export default function InventoryPage() {
         data={data}
         loading={isLoading || isFetching}
         query={query}
-        rowClassName={(row) => (row.status === 'sold' ? 'row-sold' : row.status === 'partial_paid' ? 'row-warning' : '')}
-        searchPlaceholder={`${t('inventory.carType')} · ${t('purchases.chassisNumber')}`}
+        rowClassName={(row) => ROW_CLASS[row.status]}
+        searchPlaceholder={`${t('inventory.carType')} · ${t('purchases.chassisNumber')} · ${t('sales.buyerName')}`}
         empty={{ title: t('inventory.empty'), description: t('inventory.emptyHint'), action: addButton }}
         expandable={{
           rowExpandable: (row) => row.status !== 'in_stock',
@@ -249,10 +270,8 @@ export default function InventoryPage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-[11px] font-medium tracking-wide text-subtle uppercase">{t('inventory.remaining')}</dt>
-                <dd className="mt-0.5 text-sm text-ink">
-                  <Money value={round2(row.agreedPrice - row.paidAmount)} className={row.status === 'partial_paid' ? 'text-warning' : undefined} />
-                </dd>
+                <dt className="text-[11px] font-medium tracking-wide text-subtle uppercase">{row.status === 'exceeded' ? t('inventory.advance') : t('inventory.remaining')}</dt>
+                <dd className="mt-0.5 text-sm text-ink">{renderBalance(row)}</dd>
               </div>
               {row.saleNotes && (
                 <div className="col-span-2 sm:col-span-4">

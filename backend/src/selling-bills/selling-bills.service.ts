@@ -6,6 +6,7 @@ import { paginate, resolveOrderBy, toSkipTake } from '../common/pagination'
 import { round2 } from '../common/money'
 import { nextBillNumber } from '../common/bill-number'
 import type { CreateSellingBillDto } from './dto/create-selling-bill.dto'
+import type { UpdateSellingBillDto } from './dto/update-selling-bill.dto'
 import type { ListSellingBillsQueryDto } from './dto/list-selling-bills-query.dto'
 import type { RequestUser } from '../common/decorators/current-user.decorator'
 
@@ -44,6 +45,12 @@ export class SellingBillsService {
     ])
 
     return paginate(rows, total, query)
+  }
+
+  async findOne(id: string) {
+    const bill = await this.prisma.sellingBill.findUnique({ where: { id } })
+    if (!bill) throw new NotFoundException('Selling bill not found')
+    return bill
   }
 
   async create(dto: CreateSellingBillDto, user: RequestUser) {
@@ -100,6 +107,53 @@ export class SellingBillsService {
       })
 
       return bill
+    })
+  }
+
+  /** Which car was sold is fixed at creation — only price, date, buyer and notes can change. Recomputes profit and replaces the `sale` ledger entry to match. */
+  async update(id: string, dto: UpdateSellingBillDto, user: RequestUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const bill = await tx.sellingBill.findUnique({ where: { id } })
+      if (!bill) throw new NotFoundException('Selling bill not found')
+      if (bill.status !== 'active') throw new BadRequestException('This selling bill has already been cancelled')
+
+      const now = new Date()
+      const sellingDate = new Date(dto.sellingDate)
+      const profit = round2(dto.sellingPrice - bill.buyingPrice)
+
+      await this.ledger.reverseEntriesForReference(tx, bill.id, { date: now, createdBy: user.id, createdByName: user.fullName })
+
+      const updated = await tx.sellingBill.update({
+        where: { id },
+        data: {
+          sellingPrice: dto.sellingPrice,
+          sellingDate,
+          buyerName: dto.buyerName,
+          buyerAddress: dto.buyerAddress,
+          buyerPhone: dto.buyerPhone,
+          notes: dto.notes,
+          profit,
+          updatedAt: now,
+          updatedBy: user.id,
+          updatedByName: user.fullName,
+        },
+      })
+
+      await this.ledger.writeEntry(tx, {
+        type: 'sale',
+        direction: 'credit',
+        amount: dto.sellingPrice,
+        date: sellingDate,
+        description: `Sold ${bill.itemName} to ${dto.buyerName}`,
+        itemName: bill.itemName,
+        counterpartyName: dto.buyerName,
+        referenceType: 'selling_bill',
+        referenceId: bill.id,
+        createdBy: user.id,
+        createdByName: user.fullName,
+      })
+
+      return updated
     })
   }
 

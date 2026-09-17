@@ -98,8 +98,8 @@
   --sr-info-soft: #e1f3f8;
   --sr-neutral: #64748b;
   --sr-neutral-soft: #eef1f5;
-  --sr-accent: #b8860b;
-  --sr-accent-soft: #faf1de;
+  --sr-accent: #7c3aed;
+  --sr-accent-soft: #f2ebfd;
 
   --sr-rail: #0c1a16;
   --sr-rail-2: #12241f;
@@ -139,8 +139,8 @@
   --sr-info-soft: #0c2733;
   --sr-neutral: #94a3b8;
   --sr-neutral-soft: #1d2836;
-  --sr-accent: #e0b94b;
-  --sr-accent-soft: #322815;
+  --sr-accent: #b794f6;
+  --sr-accent-soft: #2a2140;
 
   --sr-rail: #060d0b;
   --sr-rail-2: #0c1713;
@@ -307,6 +307,9 @@ textarea,
 }
 .row-sold > td {
   background-color: var(--sr-neutral-soft) !important;
+}
+.row-accent > td {
+  background-color: var(--sr-accent-soft) !important;
 }
 
 .ant-select-dropdown,

@@ -99,6 +99,7 @@
     "purchaseUpdated": "Buying bill updated",
     "purchaseCancelled": "Buying bill cancelled",
     "sellingSaved": "Selling bill saved",
+    "sellingUpdated": "Selling bill updated",
     "sellingCancelled": "Selling bill cancelled",
     "expenseSaved": "Expense added",
     "expenseUpdated": "Expense updated",
@@ -110,6 +111,7 @@
     "inventoryItemUpdated": "Inventory car updated",
     "inventoryItemDeleted": "Inventory car deleted",
     "inventoryItemMarkedSold": "Marked as sold",
+    "inventorySaleUpdated": "Sale updated",
     "followUpClientSaved": "Client added",
     "followUpClientUpdated": "Client updated",
     "followUpClientDeleted": "Client deleted"
@@ -226,13 +228,16 @@
     "agreedPrice": "Agreed price",
     "markSold": "Mark sold",
     "markSoldTitle": "Mark car as sold",
+    "editSale": "Edit sale",
+    "editSaleTitle": "Edit sale",
     "confirmSold": "Mark as sold",
     "markAvailable": "Mark available again",
     "markedAvailable": "Marked as available again",
     "saleDate": "Sale date",
     "paidAmount": "Paid amount",
-    "paidAmountHint": "Fills in with the full agreed price automatically — lower it if the buyer only paid part of it.",
+    "paidAmountHint": "Fills in with the full agreed price automatically — lower it for a partial payment, or raise it if the buyer is paying extra as an advance toward a future car.",
     "remaining": "Remaining",
+    "advance": "Advance credit",
     "recordPayment": "Record payment",
     "recordPaymentTitle": "Record a payment",
     "recordPaymentHint": "For {{item}} · remaining: {{amount}}",
@@ -372,7 +377,8 @@
     "cancelled": "Cancelled",
     "in_stock": "In stock",
     "partial_paid": "Partially paid",
-    "sold": "Sold"
+    "sold": "Sold",
+    "exceeded": "Exceeded"
   },
   "settings": {
     "title": "Settings",

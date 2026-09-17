@@ -36,6 +36,11 @@ export class InventoryItemsController {
     return this.items.markSold(id, dto, user)
   }
 
+  @Patch(':id/sale')
+  updateSale(@Param('id') id: string, @Body() dto: MarkSoldDto, @CurrentUser() user: RequestUser) {
+    return this.items.updateSale(id, dto, user)
+  }
+
   @Post(':id/mark-available')
   markAvailable(@Param('id') id: string, @CurrentUser() user: RequestUser) {
     return this.items.markAvailable(id, user)

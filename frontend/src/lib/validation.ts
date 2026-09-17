@@ -130,7 +130,8 @@ export function inventoryItemSchema(t: TFunction) {
   })
 }
 
-export function markSoldSchema(t: TFunction, maxAmount: number, formattedMax: string) {
+/** No upper bound on `paidAmount` — a buyer can pay more than the agreed price as an advance toward a future car. */
+export function markSoldSchema(t: TFunction) {
   return z.object({
     buyerName: z.string().trim().min(1, t('validation.nameRequired')),
     buyerPhone: z
@@ -141,19 +142,14 @@ export function markSoldSchema(t: TFunction, maxAmount: number, formattedMax: st
     buyerAddress: z.string().trim().optional(),
     saleNotes: z.string().trim().optional(),
     saleDate: z.string().min(1, t('validation.required')),
-    paidAmount: z
-      .number({ message: t('validation.amountNonNegative') })
-      .min(0, t('validation.amountNonNegative'))
-      .max(maxAmount, t('validation.exceedsOwed', { amount: formattedMax })),
+    paidAmount: z.number({ message: t('validation.amountNonNegative') }).min(0, t('validation.amountNonNegative')),
   })
 }
 
-export function recordInventoryPaymentSchema(t: TFunction, maxAmount: number, formattedMax: string) {
+/** No upper bound on `amount` — same as markSoldSchema, a top-up can exceed what's left owed. */
+export function recordInventoryPaymentSchema(t: TFunction) {
   return z.object({
-    amount: z
-      .number({ message: t('validation.amountPositive') })
-      .positive(t('validation.amountPositive'))
-      .max(maxAmount, t('validation.exceedsOwed', { amount: formattedMax })),
+    amount: z.number({ message: t('validation.amountPositive') }).positive(t('validation.amountPositive')),
     date: z.string().min(1, t('validation.required')),
   })
 }

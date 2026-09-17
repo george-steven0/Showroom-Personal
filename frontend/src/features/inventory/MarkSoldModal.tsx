@@ -3,40 +3,60 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Modal } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { useMarkInventoryItemSoldMutation } from '@/api/inventoryApi'
+import { useMarkInventoryItemSoldMutation, useUpdateInventorySaleMutation } from '@/api/inventoryApi'
 import { markSoldSchema, type MarkSoldFormValues } from '@/lib/validation'
 import { useNotify } from '@/lib/hooks/useNotify'
-import { formatMoney, todayIso } from '@/lib/format'
+import { todayIso } from '@/lib/format'
 import { DateField, FormRow, NumberField, TextAreaField, TextField } from '@/components/form/fields'
 import { DEFAULT_CURRENCY } from '@/lib/constants'
 import type { InventoryItem } from '@/types'
 
+/**
+ * Also doubles as the "fix a wrong amount/buyer detail" form for a car that's already sold — reopened via
+ * the "Edit sale" row action (any status but in_stock), prefilled from the existing sale instead of blank,
+ * so correcting a typo doesn't require unselling and reselling the car (which would wipe the buyer record).
+ */
 export function MarkSoldModal({ open, item, onClose }: { open: boolean; item: InventoryItem | null; onClose: () => void }) {
   const { t } = useTranslation()
   const notify = useNotify()
-  const [markSold, { isLoading }] = useMarkInventoryItemSoldMutation()
+  const isEdit = item ? item.status !== 'in_stock' : false
+  const [markSold, { isLoading: marking }] = useMarkInventoryItemSoldMutation()
+  const [updateSale, { isLoading: updating }] = useUpdateInventorySaleMutation()
 
-  const maxAmount = item?.agreedPrice ?? 0
-  const schema = useMemo(() => markSoldSchema(t, maxAmount, formatMoney(maxAmount)), [t, maxAmount])
+  const schema = useMemo(() => markSoldSchema(t), [t])
   const form = useForm<MarkSoldFormValues>({
     resolver: zodResolver(schema),
     defaultValues: { buyerName: '', buyerPhone: '', buyerAddress: '', saleNotes: '', saleDate: todayIso(), paidAmount: 0 },
   })
 
   useEffect(() => {
-    if (!open) return
-    form.reset({ buyerName: '', buyerPhone: '', buyerAddress: '', saleNotes: '', saleDate: todayIso(), paidAmount: item?.agreedPrice ?? 0 })
+    if (!open || !item) return
+    form.reset(
+      isEdit
+        ? {
+            buyerName: item.buyerName ?? '',
+            buyerPhone: item.buyerPhone ?? '',
+            buyerAddress: item.buyerAddress ?? '',
+            saleNotes: item.saleNotes ?? '',
+            saleDate: item.saleDate ?? todayIso(),
+            paidAmount: item.paidAmount,
+          }
+        : { buyerName: '', buyerPhone: '', buyerAddress: '', saleNotes: '', saleDate: todayIso(), paidAmount: item.agreedPrice },
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id])
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!item) return
+    const body = { ...values, buyerPhone: values.buyerPhone || undefined, buyerAddress: values.buyerAddress || undefined, saleNotes: values.saleNotes || undefined }
     try {
-      await markSold({
-        id: item.id,
-        body: { ...values, buyerPhone: values.buyerPhone || undefined, buyerAddress: values.buyerAddress || undefined, saleNotes: values.saleNotes || undefined },
-      }).unwrap()
-      notify.success(t('messages.inventoryItemMarkedSold'))
+      if (isEdit) {
+        await updateSale({ id: item.id, body }).unwrap()
+        notify.success(t('messages.inventorySaleUpdated'))
+      } else {
+        await markSold({ id: item.id, body }).unwrap()
+        notify.success(t('messages.inventoryItemMarkedSold'))
+      }
       onClose()
     } catch (error) {
       notify.apiError(error)
@@ -46,12 +66,12 @@ export function MarkSoldModal({ open, item, onClose }: { open: boolean; item: In
   return (
     <Modal
       open={open}
-      title={t('inventory.markSoldTitle')}
+      title={isEdit ? t('inventory.editSaleTitle') : t('inventory.markSoldTitle')}
       onCancel={onClose}
       onOk={() => void onSubmit()}
-      okText={t('inventory.confirmSold')}
+      okText={isEdit ? t('common.saveChanges') : t('inventory.confirmSold')}
       cancelText={t('common.cancel')}
-      confirmLoading={isLoading}
+      confirmLoading={marking || updating}
       width={480}
       destroyOnHidden
     >
@@ -68,7 +88,6 @@ export function MarkSoldModal({ open, item, onClose }: { open: boolean; item: In
             hint={t('inventory.paidAmountHint')}
             required
             min={0}
-            max={maxAmount}
             precision={2}
             suffix={DEFAULT_CURRENCY}
           />

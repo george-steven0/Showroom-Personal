@@ -263,10 +263,11 @@ model InventoryBranch {
 /// at each branch, its asking prices, and who it sold to, with no effect
 /// on capital, profit, or any other page in the app.
 ///
-/// status: 'in_stock' | 'partial_paid' | 'sold' — derived from `paidAmount`
-/// vs `agreedPrice`, never set directly: a buyer with `paidAmount` <
-/// `agreedPrice` is `partial_paid`; once it reaches the full price the
-/// item flips to `sold`.
+/// status: 'in_stock' | 'partial_paid' | 'sold' | 'exceeded' — derived from
+/// `paidAmount` vs `agreedPrice`, never set directly: a buyer with
+/// `paidAmount` < `agreedPrice` is `partial_paid`, exactly equal is `sold`,
+/// and paying more than `agreedPrice` (an advance toward a future car) is
+/// `exceeded`.
 model InventoryItem {
   id String @id @default(cuid())
 

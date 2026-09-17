@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button, Skeleton } from 'antd'
 import type { DefaultOptionType } from 'antd/es/select'
 import { useTranslation } from 'react-i18next'
-import { useCreateSellingBillMutation } from '@/api/sellingBillsApi'
+import { useCreateSellingBillMutation, useGetSellingBillQuery, useUpdateSellingBillMutation } from '@/api/sellingBillsApi'
 import { useGetAvailablePurchaseLinesQuery } from '@/api/purchaseBillsApi'
 import { sellingBillSchema, type SellingBillFormValues } from '@/lib/validation'
 import { useNotify } from '@/lib/hooks/useNotify'
@@ -18,13 +18,17 @@ import type { PurchaseBillLine } from '@/types'
 
 export default function SellingBillFormPage() {
   const { t } = useTranslation()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const notify = useNotify()
   const [searchParams] = useSearchParams()
   const preselectLineId = searchParams.get('lineId')
+  const isEdit = Boolean(id)
 
-  const { data: availableLines, isLoading } = useGetAvailablePurchaseLinesQuery()
+  const { data: existing, isLoading: loadingExisting } = useGetSellingBillQuery(id!, { skip: !id })
+  const { data: availableLines, isLoading: loadingLines } = useGetAvailablePurchaseLinesQuery(undefined, { skip: isEdit })
   const [createBill, { isLoading: creating }] = useCreateSellingBillMutation()
+  const [updateBill, { isLoading: updating }] = useUpdateSellingBillMutation()
 
   const [selectedLine, setSelectedLine] = useState<PurchaseBillLine | null>(null)
 
@@ -69,74 +73,124 @@ export default function SellingBillFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselectLineId, availableLines])
 
+  useEffect(() => {
+    if (!existing) return
+    form.reset({
+      purchaseLineId: existing.purchaseLineId,
+      sellingPrice: existing.sellingPrice,
+      sellingDate: existing.sellingDate,
+      buyerName: existing.buyerName,
+      buyerAddress: existing.buyerAddress ?? '',
+      buyerPhone: existing.buyerPhone ?? '',
+      notes: existing.notes ?? '',
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing])
+
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await createBill({
-        purchaseLineId: values.purchaseLineId,
-        sellingPrice: values.sellingPrice,
-        sellingDate: values.sellingDate,
-        buyerName: values.buyerName,
-        buyerAddress: values.buyerAddress || undefined,
-        buyerPhone: values.buyerPhone || undefined,
-        notes: values.notes || undefined,
-      }).unwrap()
-      notify.success(t('messages.sellingSaved'))
+      if (isEdit && id) {
+        await updateBill({
+          id,
+          body: {
+            sellingPrice: values.sellingPrice,
+            sellingDate: values.sellingDate,
+            buyerName: values.buyerName,
+            buyerAddress: values.buyerAddress || undefined,
+            buyerPhone: values.buyerPhone || undefined,
+            notes: values.notes || undefined,
+          },
+        }).unwrap()
+        notify.success(t('messages.sellingUpdated'))
+      } else {
+        await createBill({
+          purchaseLineId: values.purchaseLineId,
+          sellingPrice: values.sellingPrice,
+          sellingDate: values.sellingDate,
+          buyerName: values.buyerName,
+          buyerAddress: values.buyerAddress || undefined,
+          buyerPhone: values.buyerPhone || undefined,
+          notes: values.notes || undefined,
+        }).unwrap()
+        notify.success(t('messages.sellingSaved'))
+      }
       navigate('/selling-bills')
     } catch (error) {
       notify.apiError(error)
     }
   })
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 10 }} />
+  if (isEdit ? loadingExisting : loadingLines) return <Skeleton active paragraph={{ rows: 10 }} />
 
-  const profit = selectedLine ? (form.watch('sellingPrice') || 0) - selectedLine.price : 0
+  const saving = creating || updating
+  const buyingPriceForProfit = isEdit ? (existing?.buyingPrice ?? 0) : (selectedLine?.price ?? 0)
+  const showProfit = isEdit ? Boolean(existing) : Boolean(selectedLine)
+  const profit = (form.watch('sellingPrice') || 0) - buyingPriceForProfit
+  const noAvailableCars = !isEdit && (availableLines ?? []).length === 0
 
   return (
     <form onSubmit={onSubmit} noValidate>
       <PageHeader
-        title={t('sales.add')}
+        title={isEdit ? t('sales.edit') : t('sales.add')}
+        subtitle={existing?.number}
         actions={
           <>
-            <Button onClick={() => navigate('/selling-bills')} disabled={creating}>
+            <Button onClick={() => navigate('/selling-bills')} disabled={saving}>
               {t('common.cancel')}
             </Button>
-            <Button type="primary" htmlType="submit" loading={creating} disabled={(availableLines ?? []).length === 0}>
-              {t('common.save')}
+            <Button type="primary" htmlType="submit" loading={saving} disabled={noAvailableCars}>
+              {isEdit ? t('common.saveChanges') : t('common.save')}
             </Button>
           </>
         }
       />
 
-      {(availableLines ?? []).length === 0 ? (
+      {noAvailableCars ? (
         <SectionCard>
           <EmptyState compact title={t('sales.noAvailableCars')} />
         </SectionCard>
       ) : (
         <div className="space-y-4">
           <SectionCard title={t('sales.selectItem')}>
-            <FormRow cols={1}>
-              <SelectField
-                control={form.control}
-                name="purchaseLineId"
-                label={t('sales.selectItem')}
-                placeholder={t('sales.selectItemPlaceholder')}
-                required
-                options={lineOptions}
-                onAfterChange={onSelectLine}
-                filterOption={filterLineOption}
-              />
-            </FormRow>
+            {isEdit ? (
+              existing && (
+                <dl className="grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface-2 p-4 sm:grid-cols-3">
+                  <Field label={t('purchases.itemName')} value={existing.itemName} />
+                  <Field label={t('sales.supplier')} value={existing.supplierName} />
+                  <Field label={t('sales.buyingDate')} value={formatDate(existing.buyingDate)} />
+                  <Field label={t('sales.buyingPrice')} value={<Money value={existing.buyingPrice} />} mono />
+                  <Field label={t('sales.chassisNumber')} value={existing.chassisNumber} mono />
+                  <Field label={t('sales.motorNumber')} value={existing.motorNumber} mono />
+                  <Field label={t('sales.modelYear')} value={existing.modelYear ?? '—'} />
+                </dl>
+              )
+            ) : (
+              <>
+                <FormRow cols={1}>
+                  <SelectField
+                    control={form.control}
+                    name="purchaseLineId"
+                    label={t('sales.selectItem')}
+                    placeholder={t('sales.selectItemPlaceholder')}
+                    required
+                    options={lineOptions}
+                    onAfterChange={onSelectLine}
+                    filterOption={filterLineOption}
+                  />
+                </FormRow>
 
-            {selectedLine && (
-              <dl className="mt-4 grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface-2 p-4 sm:grid-cols-3">
-                <Field label={t('sales.supplier')} value={selectedLine.supplierName} />
-                <Field label={t('sales.buyingDate')} value={formatDate(selectedLine.purchaseDate)} />
-                <Field label={t('sales.buyingPrice')} value={<Money value={selectedLine.price} />} mono />
-                <Field label={t('sales.chassisNumber')} value={selectedLine.chassisNumber} mono />
-                <Field label={t('sales.motorNumber')} value={selectedLine.motorNumber} mono />
-                <Field label={t('sales.modelYear')} value={selectedLine.modelYear ?? '—'} />
-                {selectedLine.description && <Field label={t('sales.description')} value={selectedLine.description} className="col-span-full" />}
-              </dl>
+                {selectedLine && (
+                  <dl className="mt-4 grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface-2 p-4 sm:grid-cols-3">
+                    <Field label={t('sales.supplier')} value={selectedLine.supplierName} />
+                    <Field label={t('sales.buyingDate')} value={formatDate(selectedLine.purchaseDate)} />
+                    <Field label={t('sales.buyingPrice')} value={<Money value={selectedLine.price} />} mono />
+                    <Field label={t('sales.chassisNumber')} value={selectedLine.chassisNumber} mono />
+                    <Field label={t('sales.motorNumber')} value={selectedLine.motorNumber} mono />
+                    <Field label={t('sales.modelYear')} value={selectedLine.modelYear ?? '—'} />
+                    {selectedLine.description && <Field label={t('sales.description')} value={selectedLine.description} className="col-span-full" />}
+                  </dl>
+                )}
+              </>
             )}
           </SectionCard>
 
@@ -144,7 +198,7 @@ export default function SellingBillFormPage() {
             <FormRow cols={3}>
               <NumberField control={form.control} name="sellingPrice" label={t('sales.sellingPrice')} required min={0} precision={2} suffix={DEFAULT_CURRENCY} />
               <DateField control={form.control} name="sellingDate" label={t('sales.sellingDate')} required maxToday />
-              {selectedLine && (
+              {showProfit && (
                 <div>
                   <p className="mb-1.5 text-sm font-medium text-ink">{t('sales.profit')}</p>
                   <p className="mt-2">
