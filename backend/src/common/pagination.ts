@@ -36,7 +36,8 @@ export function resolveOrderBy(
   sortableFields: Record<string, string | string[]>,
   fallback: Record<string, unknown>,
 ): Record<string, unknown> {
-  const path = query.sortBy ? sortableFields[query.sortBy] : undefined
+  const hasSortBy = !!query.sortBy && Object.prototype.hasOwnProperty.call(sortableFields, query.sortBy)
+  const path = hasSortBy ? sortableFields[query.sortBy as string] : undefined
   if (!path) return fallback
 
   const direction: 'asc' | 'desc' = query.sortOrder === 'ascend' ? 'asc' : 'desc'
