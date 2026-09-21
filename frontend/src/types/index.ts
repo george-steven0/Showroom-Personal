@@ -51,7 +51,25 @@ export interface Supplier extends AuditFields {
 export type PurchaseLineStatus = 'in_stock' | 'sold'
 export type BillStatus = 'active' | 'cancelled'
 
-export interface PurchaseBillLine {
+/** Who took a consignment (أمانة) car and on what terms — all null unless the car's `isConsignment` is set. */
+export interface ConsignmentDetails {
+  consignmentTraderName: string | null
+  consignmentDate: string | null
+  consignmentAddress: string | null
+  consignmentPaidAmount: number | null
+  consignmentNotes: string | null
+}
+
+export interface ConsignmentPayload {
+  isConsignment: boolean
+  consignmentTraderName?: string
+  consignmentDate?: string
+  consignmentAddress?: string
+  consignmentPaidAmount?: number
+  consignmentNotes?: string
+}
+
+export interface PurchaseBillLine extends ConsignmentDetails {
   id: string
   purchaseBillId: string
   itemName: string
@@ -66,6 +84,7 @@ export interface PurchaseBillLine {
   owed: number
   notes: string | null
   status: PurchaseLineStatus
+  isConsignment: boolean
   purchaseDate: string
   purchaseBillNumber: string
 }
@@ -234,9 +253,17 @@ export interface InventoryBranch {
   createdByName: string
 }
 
+export interface InventoryStats {
+  inStock: number
+  partialPaid: number
+  sold: number
+  exceeded: number
+  consignment: number
+}
+
 export type InventoryItemStatus = 'in_stock' | 'partial_paid' | 'sold' | 'exceeded'
 
-export interface InventoryItem {
+export interface InventoryItem extends ConsignmentDetails {
   id: string
   carType: string
   brand: string | null
@@ -246,6 +273,7 @@ export interface InventoryItem {
   modelYear: number | null
   color: string | null
   notes: string | null
+  isConsignment: boolean
   branchId: string
   branch: InventoryBranch
   buyPrice: number | null

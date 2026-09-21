@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator'
+import { IsIn, IsOptional, IsString } from 'class-validator'
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto'
 
 export class ListInventoryItemsQueryDto extends PaginationQueryDto {
@@ -11,6 +11,11 @@ export class ListInventoryItemsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   status?: string
+
+  /** 'true' = consignment (أمانة) cars only, 'false' = everything else. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  consignment?: 'true' | 'false'
 
   @IsOptional()
   @IsString()

@@ -3,8 +3,10 @@ import { InventoryItemsService } from './inventory-items.service'
 import { CreateInventoryItemDto } from './dto/create-inventory-item.dto'
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto'
 import { ListInventoryItemsQueryDto } from './dto/list-inventory-items-query.dto'
+import { InventoryStatsQueryDto } from './dto/inventory-stats-query.dto'
 import { MarkSoldDto } from './dto/mark-sold.dto'
 import { RecordInventoryPaymentDto } from './dto/record-inventory-payment.dto'
+import { SetConsignmentDto } from '../../common/dto/set-consignment.dto'
 import { CurrentUser, type RequestUser } from '../../common/decorators/current-user.decorator'
 
 @Controller('inventory/items')
@@ -16,6 +18,11 @@ export class InventoryItemsController {
     return this.items.list(query)
   }
 
+  @Get('stats')
+  stats(@Query() query: InventoryStatsQueryDto) {
+    return this.items.stats(query)
+  }
+
   @Post()
   create(@Body() dto: CreateInventoryItemDto, @CurrentUser() user: RequestUser) {
     return this.items.create(dto, user)
@@ -24,6 +31,11 @@ export class InventoryItemsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto, @CurrentUser() user: RequestUser) {
     return this.items.update(id, dto, user)
+  }
+
+  @Patch(':id/consignment')
+  setConsignment(@Param('id') id: string, @Body() dto: SetConsignmentDto, @CurrentUser() user: RequestUser) {
+    return this.items.setConsignment(id, dto, user)
   }
 
   @Delete(':id')

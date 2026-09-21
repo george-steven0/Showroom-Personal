@@ -6,7 +6,9 @@ import {
   useDeleteInventoryItemMutation,
   useGetInventoryBranchesQuery,
   useGetInventoryItemsQuery,
+  useGetInventoryStatsQuery,
   useMarkInventoryItemAvailableMutation,
+  useSetInventoryConsignmentMutation,
 } from '@/api/inventoryApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useDateRange } from '@/lib/hooks/useDateRange'
@@ -15,13 +17,17 @@ import { formatDate } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { DateRangeFilter } from '@/components/ui/DateRangeFilter'
+import { KpiCard, KpiGrid } from '@/components/ui/KpiCard'
 import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
-import { InventoryStatusTag } from '@/components/ui/StatusTags'
+import { ConsignmentTag, InventoryStatusTag } from '@/components/ui/StatusTags'
+import { ActionPill } from '@/components/ui/ActionPill'
 import { ACTION_ICONS, RowActions } from '@/components/ui/RowActions'
 import { UI_ICONS } from '@/components/layout/icons'
 import { round2 } from '@/lib/format'
-import type { InventoryItem, InventoryItemStatus } from '@/types'
+import { ConsignmentDrawer } from '@/components/ui/ConsignmentDrawer'
+import { ConsignmentModal } from '@/components/ui/ConsignmentModal'
+import type { ConsignmentPayload, InventoryItem, InventoryItemStatus } from '@/types'
 import { branchLabel } from './BranchSelect'
 import { InventoryItemModal } from './InventoryItemModal'
 import { MarkSoldModal } from './MarkSoldModal'
@@ -48,6 +54,7 @@ export default function InventoryPage() {
   const { data: branches } = useGetInventoryBranchesQuery()
   const [branchIds, setBranchIds] = useState<string[]>([])
   const [statuses, setStatuses] = useState<InventoryItemStatus[]>([])
+  const [consignment, setConsignment] = useState<'true' | 'false' | undefined>()
   const { value: saleRange, setPreset: setSaleRangePreset, setCustomRange: setSaleCustomRange } = useDateRange('all')
 
   const query = useTableQuery({ sortBy: 'createdAt', sortOrder: 'descend' })
@@ -55,12 +62,19 @@ export default function InventoryPage() {
     ...query.params,
     branchId: branchIds.length ? branchIds.join(',') : undefined,
     status: statuses.length ? statuses.join(',') : undefined,
+    consignment,
     ...(saleRange.preset === 'all' ? {} : { from: saleRange.from, to: saleRange.to }),
   })
 
+  const { data: stats, isLoading: statsLoading } = useGetInventoryStatsQuery({ branchId: branchIds.length ? branchIds.join(',') : undefined })
+
   const [deleteItem, { isLoading: deleting }] = useDeleteInventoryItemMutation()
   const [markAvailable] = useMarkInventoryItemAvailableMutation()
+  const [setItemConsignment, { isLoading: savingConsignment }] = useSetInventoryConsignmentMutation()
 
+  const [consigning, setConsigning] = useState<InventoryItem | null>(null)
+  const [unmarking, setUnmarking] = useState<InventoryItem | null>(null)
+  const [viewingConsignment, setViewingConsignment] = useState<InventoryItem | null>(null)
   const [editing, setEditing] = useState<InventoryItem | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [selling, setSelling] = useState<InventoryItem | null>(null)
@@ -87,8 +101,45 @@ export default function InventoryPage() {
     }
   }
 
+  const handleSaveConsignment = async (body: ConsignmentPayload) => {
+    if (!consigning) return
+    try {
+      await setItemConsignment({ id: consigning.id, body }).unwrap()
+      notify.success(t(consigning.isConsignment ? 'consignment.saved' : 'consignment.marked'))
+      setConsigning(null)
+    } catch (error) {
+      notify.apiError(error)
+    }
+  }
+
+  const handleClearConsignment = async () => {
+    if (!unmarking) return
+    try {
+      await setItemConsignment({ id: unmarking.id, body: { isConsignment: false } }).unwrap()
+      notify.success(t('consignment.cleared'))
+      setUnmarking(null)
+    } catch (error) {
+      notify.apiError(error)
+    }
+  }
+
   const columns: ColumnsType<InventoryItem> = [
-    { title: t('inventory.carType'), dataIndex: 'carType', render: (value: string) => <span className="font-medium text-ink">{value}</span> },
+    {
+      title: t('inventory.carType'),
+      dataIndex: 'carType',
+      render: (value: string, row) => (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {row.isConsignment ? (
+            <button type="button" onClick={() => setViewingConsignment(row)} className="cursor-pointer font-medium text-ink hover:text-rose hover:underline">
+              {value}
+            </button>
+          ) : (
+            <span className="font-medium text-ink">{value}</span>
+          )}
+          {row.isConsignment && <ConsignmentTag details={row} onClick={() => setViewingConsignment(row)} />}
+        </div>
+      ),
+    },
     { title: t('inventory.brand'), dataIndex: 'brand', responsive: ['lg'], render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
     { title: t('inventory.trimLevel'), dataIndex: 'trimLevel', responsive: ['lg'], render: (value: string | null) => value ?? <span className="text-subtle">—</span> },
     {
@@ -119,32 +170,35 @@ export default function InventoryPage() {
       title: t('common.actions'),
       key: 'actions',
       align: 'right',
-      width: 170,
+      width: 220,
       fixed: 'right',
       render: (_, row) => (
         <div className="flex items-center justify-end gap-2">
           {row.status === 'in_stock' && (
-            <button
-              type="button"
-              onClick={() => setSelling(row)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-medium whitespace-nowrap text-success ring-1 ring-inset ring-success/25 transition-colors hover:bg-success hover:text-white hover:ring-success"
-            >
-              {ACTION_ICONS.cash}
+            <ActionPill tone="success" icon={ACTION_ICONS.cash} onClick={() => setSelling(row)}>
               {t('inventory.markSold')}
-            </button>
+            </ActionPill>
           )}
           {row.status === 'partial_paid' && (
-            <button
-              type="button"
-              onClick={() => setPayingItem(row)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-warning-soft px-3 py-1 text-xs font-medium whitespace-nowrap text-warning ring-1 ring-inset ring-warning/25 transition-colors hover:bg-warning hover:text-white hover:ring-warning"
-            >
-              {ACTION_ICONS.cash}
+            <ActionPill tone="warning" icon={ACTION_ICONS.cash} onClick={() => setPayingItem(row)}>
               {t('inventory.recordPayment')}
-            </button>
+            </ActionPill>
           )}
           <RowActions
             actions={[
+              {
+                key: 'consignment',
+                label: row.isConsignment ? t('consignment.edit') : t('consignment.mark'),
+                icon: ACTION_ICONS.handover,
+                onClick: () => setConsigning(row),
+              },
+              {
+                key: 'consignment-clear',
+                label: t('consignment.unmark'),
+                icon: ACTION_ICONS.restore,
+                hidden: !row.isConsignment,
+                onClick: () => setUnmarking(row),
+              },
               {
                 key: 'edit-sale',
                 label: t('inventory.editSale'),
@@ -211,6 +265,31 @@ export default function InventoryPage() {
         }
       />
 
+      <div className="mb-4">
+        <KpiGrid>
+          <KpiCard label={t('status.in_stock')} value={stats?.inStock ?? 0} icon={UI_ICONS.box} tone="info" loading={statsLoading} />
+          <KpiCard label={t('status.sold')} value={stats?.sold ?? 0} icon={UI_ICONS.invoice} tone="success" loading={statsLoading} />
+          <KpiCard label={t('consignment.label')} value={stats?.consignment ?? 0} icon={ACTION_ICONS.handover} tone="rose" loading={statsLoading} />
+          <KpiCard
+            label={t('inventory.kpiPartialExceeded')}
+            value={(stats?.partialPaid ?? 0) + (stats?.exceeded ?? 0)}
+            icon={UI_ICONS.alert}
+            tone="warning"
+            loading={statsLoading}
+            footer={
+              <>
+                <span className="text-warning">
+                  {stats?.partialPaid ?? 0} {t('status.partial_paid')}
+                </span>
+                <span className="text-accent">
+                  {stats?.exceeded ?? 0} {t('status.exceeded')}
+                </span>
+              </>
+            }
+          />
+        </KpiGrid>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Select
           mode="multiple"
@@ -231,6 +310,17 @@ export default function InventoryPage() {
           placeholder={t('common.status')}
           maxTagCount="responsive"
           style={{ minWidth: 220 }}
+        />
+        <Select
+          allowClear
+          value={consignment}
+          onChange={(value) => setConsignment(value)}
+          options={[
+            { value: 'true', label: t('consignment.only') },
+            { value: 'false', label: t('consignment.exclude') },
+          ]}
+          placeholder={t('consignment.label')}
+          style={{ minWidth: 180 }}
         />
       </div>
 
@@ -297,6 +387,38 @@ export default function InventoryPage() {
       <MarkSoldModal open={Boolean(selling)} item={selling} onClose={() => setSelling(null)} />
 
       <RecordInventoryPaymentModal open={Boolean(payingItem)} item={payingItem} onClose={() => setPayingItem(null)} />
+
+      <ConsignmentDrawer
+        open={Boolean(viewingConsignment)}
+        title={viewingConsignment?.carType ?? ''}
+        details={viewingConsignment}
+        onClose={() => setViewingConsignment(null)}
+        onEdit={() => {
+          setConsigning(viewingConsignment)
+          setViewingConsignment(null)
+        }}
+        onClear={() => {
+          setUnmarking(viewingConsignment)
+          setViewingConsignment(null)
+        }}
+      />
+
+      <ConsignmentModal
+        open={Boolean(consigning)}
+        initial={consigning?.isConsignment ? consigning : null}
+        loading={savingConsignment}
+        onClose={() => setConsigning(null)}
+        onSubmit={handleSaveConsignment}
+      />
+
+      <ConfirmModal
+        open={Boolean(unmarking)}
+        loading={savingConsignment}
+        title={t('consignment.unmarkTitle')}
+        description={t('consignment.unmarkBody', { name: unmarking?.carType ?? '' })}
+        onConfirm={handleClearConsignment}
+        onCancel={() => setUnmarking(null)}
+      />
 
       <ConfirmModal
         open={Boolean(target)}

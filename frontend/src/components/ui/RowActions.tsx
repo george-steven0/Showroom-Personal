@@ -88,6 +88,11 @@ export const ACTION_ICONS = {
       <circle cx="12" cy="12" r="2.5" />
     </svg>
   ),
+  handover: (
+    <svg {...iconBase} aria-hidden>
+      <path d="M7 7h13l-3-3M17 17H4l3 3" />
+    </svg>
+  ),
   download: (
     <svg {...iconBase} aria-hidden>
       <path d="M12 3v12" />

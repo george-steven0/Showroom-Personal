@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Skeleton } from 'antd'
 
-export type Tone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'accent'
+export type Tone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'rose'
 
 const TONE_CLASS: Record<Tone, string> = {
   neutral: 'bg-neutral-soft text-muted ring-line',
@@ -11,6 +11,7 @@ const TONE_CLASS: Record<Tone, string> = {
   danger: 'bg-danger-soft text-danger ring-danger/25',
   info: 'bg-info-soft text-info ring-info/25',
   accent: 'bg-accent-soft text-accent ring-accent/25',
+  rose: 'bg-rose-soft text-rose ring-rose/30',
 }
 
 const DOT_CLASS: Record<Tone, string> = {
@@ -21,6 +22,7 @@ const DOT_CLASS: Record<Tone, string> = {
   danger: 'bg-danger',
   info: 'bg-info',
   accent: 'bg-accent',
+  rose: 'bg-rose',
 }
 
 export function StatusBadge({

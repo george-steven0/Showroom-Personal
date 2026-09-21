@@ -10,6 +10,7 @@ const ICON_TONE: Record<Tone, string> = {
   danger: 'bg-danger-soft text-danger',
   info: 'bg-info-soft text-info',
   accent: 'bg-accent-soft text-accent',
+  rose: 'bg-rose-soft text-rose',
 }
 
 export interface KpiCardProps {

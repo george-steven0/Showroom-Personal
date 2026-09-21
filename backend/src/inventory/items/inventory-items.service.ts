@@ -6,9 +6,12 @@ import { round2 } from '../../common/money'
 import type { CreateInventoryItemDto } from './dto/create-inventory-item.dto'
 import type { UpdateInventoryItemDto } from './dto/update-inventory-item.dto'
 import type { ListInventoryItemsQueryDto } from './dto/list-inventory-items-query.dto'
+import type { InventoryStatsQueryDto } from './dto/inventory-stats-query.dto'
 import type { MarkSoldDto } from './dto/mark-sold.dto'
 import type { RecordInventoryPaymentDto } from './dto/record-inventory-payment.dto'
 import type { RequestUser } from '../../common/decorators/current-user.decorator'
+import type { SetConsignmentDto } from '../../common/dto/set-consignment.dto'
+import { consignmentData, splitConsignment } from '../../common/consignment'
 
 const SORTABLE_FIELDS: Record<string, string> = {
   carType: 'carType',
@@ -38,6 +41,7 @@ export class InventoryItemsService {
     const where: Prisma.InventoryItemWhereInput = {
       ...(branchIds.length ? { branchId: { in: branchIds } } : {}),
       ...(statuses.length ? { status: { in: statuses } } : {}),
+      ...(query.consignment ? { isConsignment: query.consignment === 'true' } : {}),
       ...(query.from && query.to ? { saleDate: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
       ...(query.search
         ? {
@@ -48,6 +52,7 @@ export class InventoryItemsService {
               { motorNumber: { contains: query.search } },
               { color: { contains: query.search } },
               { buyerName: { contains: query.search } },
+              { consignmentTraderName: { contains: query.search } },
             ],
           }
         : {}),
@@ -66,18 +71,50 @@ export class InventoryItemsService {
     return paginate(rows, total, query)
   }
 
+  /** Head-counts for the Inventory KPI blocks. `consignment` counts every car carrying the marker, whatever its status — the same rows the "Consignment only" filter shows. */
+  async stats(query: InventoryStatsQueryDto) {
+    const branchIds = query.branchId ? query.branchId.split(',').filter(Boolean) : []
+    const where: Prisma.InventoryItemWhereInput = branchIds.length ? { branchId: { in: branchIds } } : {}
+
+    const [byStatus, consignment] = await Promise.all([
+      this.prisma.inventoryItem.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      this.prisma.inventoryItem.count({ where: { ...where, isConsignment: true } }),
+    ])
+    const count = (status: string) => byStatus.find((row) => row.status === status)?._count._all ?? 0
+
+    return {
+      inStock: count('in_stock'),
+      partialPaid: count('partial_paid'),
+      sold: count('sold'),
+      exceeded: count('exceeded'),
+      consignment,
+    }
+  }
+
   create(dto: CreateInventoryItemDto, user: RequestUser) {
+    const { rest, consignment } = splitConsignment(dto)
     return this.prisma.inventoryItem.create({
-      data: { ...dto, createdBy: user.id, createdByName: user.fullName },
+      data: { ...rest, ...consignment, createdBy: user.id, createdByName: user.fullName },
       include: { branch: true },
     })
   }
 
   async update(id: string, dto: UpdateInventoryItemDto, user: RequestUser) {
     await this.findOrThrow(id)
+    const { rest, consignment } = splitConsignment(dto)
     return this.prisma.inventoryItem.update({
       where: { id },
-      data: { ...dto, updatedAt: new Date(), updatedBy: user.id, updatedByName: user.fullName },
+      data: { ...rest, ...consignment, updatedAt: new Date(), updatedBy: user.id, updatedByName: user.fullName },
+      include: { branch: true },
+    })
+  }
+
+  /** Marks, edits the details of, or clears (`isConsignment: false`) an item's consignment — see `consignmentData`. */
+  async setConsignment(id: string, dto: SetConsignmentDto, user: RequestUser) {
+    await this.findOrThrow(id)
+    return this.prisma.inventoryItem.update({
+      where: { id },
+      data: { ...consignmentData(dto), updatedAt: new Date(), updatedBy: user.id, updatedByName: user.fullName },
       include: { branch: true },
     })
   }

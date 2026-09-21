@@ -1,5 +1,5 @@
 import { baseApi } from './baseApi'
-import type { ListQuery, Paginated, PurchaseBill, PurchaseBillLine } from '@/types'
+import type { ConsignmentPayload, ListQuery, Paginated, PurchaseBill, PurchaseBillLine } from '@/types'
 
 export interface PurchaseLinePayload {
   itemName: string
@@ -62,6 +62,10 @@ export const purchaseBillsApi = baseApi.injectEndpoints({
       query: () => '/purchase-bill-lines?status=in_stock',
       providesTags: [{ type: 'PurchaseLine', id: 'LIST' }],
     }),
+    setLineConsignment: builder.mutation<PurchaseBillLine, { id: string; body: ConsignmentPayload }>({
+      query: ({ id, body }) => ({ url: `/purchase-bill-lines/${id}/consignment`, method: 'PATCH', body }),
+      invalidatesTags: [{ type: 'PurchaseLine', id: 'LIST' }, { type: 'PurchaseBill', id: 'LIST' }],
+    }),
     settlePayment: builder.mutation<PurchaseBillLine, { id: string; amount: number; date: string; note?: string }>({
       query: ({ id, ...body }) => ({ url: `/purchase-bill-lines/${id}/settle-payment`, method: 'POST', body }),
       invalidatesTags: [{ type: 'PurchaseBill', id: 'LIST' }, 'Accounts', 'Dashboard', 'CashTransaction'],
@@ -76,5 +80,6 @@ export const {
   useUpdatePurchaseBillMutation,
   useCancelPurchaseBillMutation,
   useGetAvailablePurchaseLinesQuery,
+  useSetLineConsignmentMutation,
   useSettlePaymentMutation,
 } = purchaseBillsApi

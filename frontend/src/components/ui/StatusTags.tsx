@@ -1,6 +1,8 @@
+import { Tooltip } from 'antd'
 import { useTranslation } from 'react-i18next'
+import { formatDate, formatMoney } from '@/lib/format'
 import { StatusBadge } from './primitives'
-import type { BillStatus, CashTransactionType, FollowUpRating, FollowUpStatus, InventoryItemStatus, PurchaseLineStatus } from '@/types'
+import type { BillStatus, CashTransactionType, ConsignmentDetails, FollowUpRating, FollowUpStatus, InventoryItemStatus, PurchaseLineStatus } from '@/types'
 
 export function BillStatusTag({ status }: { status: BillStatus }) {
   const { t } = useTranslation()
@@ -22,6 +24,35 @@ const INVENTORY_STATUS_TONE: Record<InventoryItemStatus, 'info' | 'warning' | 's
 export function InventoryStatusTag({ status }: { status: InventoryItemStatus }) {
   const { t } = useTranslation()
   return <StatusBadge tone={INVENTORY_STATUS_TONE[status]}>{t(`status.${status}`)}</StatusBadge>
+}
+
+/** A marker, not a status: the car is with a trader on consignment (أمانة) — he pays part now or after selling it. */
+export function ConsignmentTag({ details, onClick }: { details?: ConsignmentDetails; onClick?: () => void }) {
+  const { t } = useTranslation()
+  const tag = (
+    <StatusBadge tone="rose" size="small">
+      {t('consignment.label')}
+    </StatusBadge>
+  )
+  const badge = onClick ? (
+    <button type="button" onClick={onClick} className="cursor-pointer rounded-full transition-opacity hover:opacity-80">
+      {tag}
+    </button>
+  ) : (
+    tag
+  )
+  if (!details?.consignmentTraderName) return badge
+
+  const paid = details.consignmentPaidAmount ?? 0
+  const summary = [
+    details.consignmentTraderName,
+    details.consignmentDate ? formatDate(details.consignmentDate) : null,
+    paid > 0 ? `${t('consignment.paidAmount')}: ${formatMoney(paid)}` : t('consignment.notPaid'),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  return <Tooltip title={summary}>{badge}</Tooltip>
 }
 
 const RATING_TONE: Record<FollowUpRating, 'success' | 'warning' | 'neutral'> = {

@@ -10,6 +10,8 @@ import type { UpdatePurchaseBillDto } from './dto/update-purchase-bill.dto'
 import type { ListPurchaseBillsQueryDto } from './dto/list-purchase-bills-query.dto'
 import type { SettlePaymentDto } from './dto/settle-payment.dto'
 import type { RequestUser } from '../common/decorators/current-user.decorator'
+import type { SetConsignmentDto } from '../common/dto/set-consignment.dto'
+import { consignmentData } from '../common/consignment'
 
 const SORTABLE_FIELDS: Record<string, string> = { number: 'number', date: 'date', total: 'total' }
 
@@ -130,6 +132,22 @@ export class PurchaseBillsService {
       const supplierById = new Map(suppliers.map((s) => [s.id, s]))
 
       const date = new Date(dto.date)
+      // Lines are replaced wholesale below, so carry the consignment marker and its details over by chassis number.
+      const consignmentByChassis = new Map(
+        existing.lines
+          .filter((line) => line.isConsignment)
+          .map((line) => [
+            line.chassisNumber,
+            {
+              isConsignment: true,
+              consignmentTraderName: line.consignmentTraderName,
+              consignmentDate: line.consignmentDate,
+              consignmentAddress: line.consignmentAddress,
+              consignmentPaidAmount: line.consignmentPaidAmount,
+              consignmentNotes: line.consignmentNotes,
+            },
+          ]),
+      )
       for (const line of existing.lines) {
         await this.ledger.reverseEntriesForReference(tx, line.id, { date, createdBy: user.id, createdByName: user.fullName })
       }
@@ -158,6 +176,7 @@ export class PurchaseBillsService {
               price: line.price,
               paidAmount: Math.min(line.paidAmount, line.price),
               notes: line.notes,
+              ...consignmentByChassis.get(line.chassisNumber),
             })),
           },
         },
@@ -212,6 +231,20 @@ export class PurchaseBillsService {
       orderBy: { createdAt: 'desc' },
     })
     return lines.map((line) => this.mapLine(line, line.purchaseBill, line.supplier))
+  }
+
+  /** Marks, edits the details of, or clears a car's consignment. No ledger, price or status effect, so it only needs the car to still be in stock. */
+  async setLineConsignment(lineId: string, dto: SetConsignmentDto) {
+    const line = await this.prisma.purchaseBillLine.findUnique({ where: { id: lineId }, include: { supplier: true, purchaseBill: true } })
+    if (!line) throw new NotFoundException('Car not found')
+    if (line.status !== 'in_stock') throw new BadRequestException('Only cars still in stock can be marked as consignment')
+
+    const updated = await this.prisma.purchaseBillLine.update({
+      where: { id: lineId },
+      data: consignmentData(dto),
+      include: { supplier: true, purchaseBill: true },
+    })
+    return this.mapLine(updated, updated.purchaseBill, updated.supplier)
   }
 
   async settlePayment(lineId: string, dto: SettlePaymentDto, user: RequestUser) {
@@ -282,6 +315,12 @@ export class PurchaseBillsService {
       owed: round2(line.price - line.paidAmount),
       notes: line.notes,
       status: line.status,
+      isConsignment: line.isConsignment,
+      consignmentTraderName: line.consignmentTraderName,
+      consignmentDate: line.consignmentDate,
+      consignmentAddress: line.consignmentAddress,
+      consignmentPaidAmount: line.consignmentPaidAmount,
+      consignmentNotes: line.consignmentNotes,
       purchaseDate: bill.date,
       purchaseBillNumber: bill.number,
     }

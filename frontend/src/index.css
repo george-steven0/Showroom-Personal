@@ -55,6 +55,8 @@
   --color-neutral-soft: var(--sr-neutral-soft);
   --color-accent: var(--sr-accent);
   --color-accent-soft: var(--sr-accent-soft);
+  --color-rose: var(--sr-rose);
+  --color-rose-soft: var(--sr-rose-soft);
 
   --color-rail: var(--sr-rail);
   --color-rail-2: var(--sr-rail-2);
@@ -100,6 +102,8 @@
   --sr-neutral-soft: #eef1f5;
   --sr-accent: #7c3aed;
   --sr-accent-soft: #f2ebfd;
+  --sr-rose: #be185d;
+  --sr-rose-soft: #fce7f1;
 
   --sr-rail: #0c1a16;
   --sr-rail-2: #12241f;
@@ -141,6 +145,8 @@
   --sr-neutral-soft: #1d2836;
   --sr-accent: #b794f6;
   --sr-accent-soft: #2a2140;
+  --sr-rose: #f472b6;
+  --sr-rose-soft: #3a1a2b;
 
   --sr-rail: #060d0b;
   --sr-rail-2: #0c1713;

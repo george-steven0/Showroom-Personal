@@ -1,9 +1,11 @@
 import { Type } from 'class-transformer'
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsBoolean, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator'
+
+import { ConsignmentDetailsDto, strictBoolean } from '../../../common/dto/set-consignment.dto'
 
 const CURRENT_YEAR = new Date().getFullYear() + 1
 
-export class CreateInventoryItemDto {
+export class CreateInventoryItemDto extends ConsignmentDetailsDto {
   @IsString()
   @IsNotEmpty({ message: 'Car type is required' })
   carType!: string
@@ -38,6 +40,11 @@ export class CreateInventoryItemDto {
   @IsOptional()
   @IsString()
   notes?: string
+
+  @IsOptional()
+  @strictBoolean()
+  @IsBoolean()
+  isConsignment?: boolean
 
   @IsString()
   @IsNotEmpty({ message: 'Branch is required' })

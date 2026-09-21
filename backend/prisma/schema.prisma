@@ -121,6 +121,17 @@ model PurchaseBillLine {
 
   status String @default("in_stock")
 
+  /// أمانة — the car is with a trader on consignment (he pays part now or
+  /// after selling it). A marker plus who/when/where/how much he's paid so
+  /// far: it changes no status, price or ledger. The `consignment*` details
+  /// are set together and cleared together with the marker.
+  isConsignment         Boolean   @default(false)
+  consignmentTraderName String?
+  consignmentDate       DateTime?
+  consignmentAddress    String?
+  consignmentPaidAmount Float?
+  consignmentNotes      String?
+
   createdAt DateTime @default(now())
 
   // A list, not a to-one: cancelling a sale frees the car to be sold again,
@@ -289,6 +300,14 @@ model InventoryItem {
 
   status     String @default("in_stock")
   paidAmount Float  @default(0)
+
+  /// أمانة — see `PurchaseBillLine.isConsignment`.
+  isConsignment         Boolean   @default(false)
+  consignmentTraderName String?
+  consignmentDate       DateTime?
+  consignmentAddress    String?
+  consignmentPaidAmount Float?
+  consignmentNotes      String?
 
   buyerName    String?
   buyerPhone   String?

@@ -154,6 +154,17 @@ export function recordInventoryPaymentSchema(t: TFunction) {
   })
 }
 
+/** Only the trader's name is mandatory — the rest is optional detail, and `paidAmount` empty means "hasn't paid yet". */
+export function consignmentSchema(t: TFunction) {
+  return z.object({
+    traderName: z.string().trim().min(1, t('validation.nameRequired')),
+    date: z.string().min(1, t('validation.required')),
+    address: z.string().trim().optional(),
+    paidAmount: z.number().min(0, t('validation.amountNonNegative')).nullable().optional(),
+    notes: z.string().trim().optional(),
+  })
+}
+
 export function followUpClientSchema(t: TFunction) {
   return z.object({
     clientName: z.string().trim().min(1, t('validation.nameRequired')),
@@ -200,4 +211,5 @@ export type SettingsFormValues = z.infer<ReturnType<typeof settingsSchema>>
 export type InventoryItemFormValues = z.infer<ReturnType<typeof inventoryItemSchema>>
 export type MarkSoldFormValues = z.infer<ReturnType<typeof markSoldSchema>>
 export type RecordInventoryPaymentFormValues = z.infer<ReturnType<typeof recordInventoryPaymentSchema>>
+export type ConsignmentFormValues = z.infer<ReturnType<typeof consignmentSchema>>
 export type FollowUpClientFormValues = z.infer<ReturnType<typeof followUpClientSchema>>

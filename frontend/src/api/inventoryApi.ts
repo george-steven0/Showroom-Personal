@@ -1,5 +1,5 @@
 import { baseApi } from './baseApi'
-import type { InventoryBranch, InventoryItem, ListQuery, Paginated } from '@/types'
+import type { ConsignmentPayload, InventoryBranch, InventoryItem, InventoryStats, ListQuery, Paginated } from '@/types'
 
 export interface InventoryItemPayload {
   carType: string
@@ -59,12 +59,20 @@ export const inventoryApi = baseApi.injectEndpoints({
           ? [...result.rows.map((row) => ({ type: 'InventoryItem' as const, id: row.id })), { type: 'InventoryItem', id: 'LIST' }]
           : [{ type: 'InventoryItem', id: 'LIST' }],
     }),
+    getInventoryStats: builder.query<InventoryStats, { branchId?: string }>({
+      query: (params) => ({ url: '/inventory/items/stats', params }),
+      providesTags: [{ type: 'InventoryItem', id: 'LIST' }],
+    }),
     createInventoryItem: builder.mutation<InventoryItem, InventoryItemPayload>({
       query: (body) => ({ url: '/inventory/items', method: 'POST', body }),
       invalidatesTags: [{ type: 'InventoryItem', id: 'LIST' }],
     }),
     updateInventoryItem: builder.mutation<InventoryItem, { id: string; body: InventoryItemPayload }>({
       query: ({ id, body }) => ({ url: `/inventory/items/${id}`, method: 'PATCH', body }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'InventoryItem', id }, { type: 'InventoryItem', id: 'LIST' }],
+    }),
+    setInventoryConsignment: builder.mutation<InventoryItem, { id: string; body: ConsignmentPayload }>({
+      query: ({ id, body }) => ({ url: `/inventory/items/${id}/consignment`, method: 'PATCH', body }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'InventoryItem', id }, { type: 'InventoryItem', id: 'LIST' }],
     }),
     deleteInventoryItem: builder.mutation<{ success: boolean }, string>({
@@ -96,8 +104,10 @@ export const {
   useUpdateInventoryBranchMutation,
   useDeleteInventoryBranchMutation,
   useGetInventoryItemsQuery,
+  useGetInventoryStatsQuery,
   useCreateInventoryItemMutation,
   useUpdateInventoryItemMutation,
+  useSetInventoryConsignmentMutation,
   useDeleteInventoryItemMutation,
   useMarkInventoryItemSoldMutation,
   useUpdateInventorySaleMutation,
