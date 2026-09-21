@@ -16,6 +16,7 @@ import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
 import { BillStatusTag, PurchaseLineStatusTag } from '@/components/ui/StatusTags'
 import { ACTION_ICONS, RowActions } from '@/components/ui/RowActions'
+import { CloneButton } from '@/components/ui/CloneButton'
 import { UI_ICONS } from '@/components/layout/icons'
 import { usePrintable, PrintButton } from '@/components/print/PrintDocument'
 import type { PurchaseBill } from '@/types'
@@ -84,30 +85,33 @@ export default function PurchaseBillsPage() {
       title: t('common.actions'),
       key: 'actions',
       align: 'right',
-      width: 60,
+      width: 100,
       fixed: 'right',
       render: (_, row) => (
-        <RowActions
-          actions={[
-            { key: 'view', label: t('common.view'), icon: ACTION_ICONS.view, onClick: () => setViewing(row) },
-            {
-              key: 'edit',
-              label: t('common.edit'),
-              icon: ACTION_ICONS.edit,
-              hidden: !canEditOrCancel(row),
-              onClick: () => navigate(`/buying-bills/${row.id}/edit`),
-            },
-            {
-              key: 'cancel',
-              label: t('common.delete'),
-              icon: ACTION_ICONS.delete,
-              danger: true,
-              hidden: row.status === 'cancelled',
-              disabled: !canEditOrCancel(row),
-              onClick: () => setTarget(row),
-            },
-          ]}
-        />
+        <div className="flex items-center justify-end gap-1">
+          <CloneButton onClick={() => navigate(`/buying-bills/new?cloneFrom=${row.id}`)} />
+          <RowActions
+            actions={[
+              { key: 'view', label: t('common.view'), icon: ACTION_ICONS.view, onClick: () => setViewing(row) },
+              {
+                key: 'edit',
+                label: t('common.edit'),
+                icon: ACTION_ICONS.edit,
+                hidden: !canEditOrCancel(row),
+                onClick: () => navigate(`/buying-bills/${row.id}/edit`),
+              },
+              {
+                key: 'cancel',
+                label: t('common.delete'),
+                icon: ACTION_ICONS.delete,
+                danger: true,
+                hidden: row.status === 'cancelled',
+                disabled: !canEditOrCancel(row),
+                onClick: () => setTarget(row),
+              },
+            ]}
+          />
+        </div>
       ),
     },
   ]

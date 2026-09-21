@@ -34,10 +34,20 @@ export function PurchaseLineRow({
   // amount on purpose" — most buying bills are paid in full, but a
   // partial payment (creating supplier debt) has to stick once entered,
   // even if the price is edited again afterward.
-  const lastAutoValue = useRef(0)
+  //
+  // `null` until the first run, which decides once whether this row follows
+  // the price at all: only a blank new row does. A row that mounts already
+  // holding real numbers (an edited or cloned bill) never has its paid amount
+  // overwritten — otherwise an unpaid line (paid 0) would silently flip to
+  // "fully paid" the moment its price loaded.
+  const lastAutoValue = useRef<number | null>(null)
 
   useEffect(() => {
     const currentPaid = getValues(`lines.${index}.paidAmount`)
+    if (lastAutoValue.current === null) {
+      lastAutoValue.current = currentPaid === 0 && (price ?? 0) === 0 ? 0 : -1
+      return
+    }
     if (currentPaid === lastAutoValue.current) {
       setValue(`lines.${index}.paidAmount`, price ?? 0, { shouldValidate: true, shouldDirty: true })
       lastAutoValue.current = price ?? 0

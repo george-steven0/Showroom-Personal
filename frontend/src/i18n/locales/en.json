@@ -63,7 +63,8 @@
     "back": "Back",
     "required": "Required",
     "loading": "Loading…",
-    "remove": "Remove"
+    "remove": "Remove",
+    "clone": "Clone"
   },
   "validation": {
     "usernameRequired": "Username is required",
@@ -159,7 +160,9 @@
     "cancelTitle": "Cancel buying bill?",
     "cancelBody": "This reverses its payments and returns the cars to available stock. Only possible while none of its cars have been sold.",
     "cancelBlocked": "This bill cannot be cancelled because at least one of its cars has already been sold.",
-    "print": "Print bill"
+    "print": "Print bill",
+    "cloneNotice": "Cloned from bill {{number}}. Chassis and motor numbers were left empty and the date was reset to today — enter each car's new numbers and check the prices and paid amounts before saving.",
+    "cloneFailed": "That bill couldn't be loaded for cloning, so this is an empty form."
   },
   "sales": {
     "title": "Selling Bills",
@@ -205,6 +208,7 @@
     "subtitle": "Manual stock log by branch — separate from the rest of the app, doesn't affect accounts.",
     "addItem": "Add car",
     "addItemTitle": "Add car to inventory",
+    "cloneNotice": "Cloned from \"{{name}}\" — the chassis and motor numbers were left empty. Enter the new car's numbers, then save as usual.",
     "editItemTitle": "Edit inventory car",
     "carType": "Car type",
     "brand": "Brand",

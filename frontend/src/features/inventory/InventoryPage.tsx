@@ -22,6 +22,7 @@ import { Money } from '@/components/ui/Money'
 import { PageHeader } from '@/components/ui/primitives'
 import { ConsignmentTag, InventoryStatusTag } from '@/components/ui/StatusTags'
 import { ActionPill } from '@/components/ui/ActionPill'
+import { CloneButton } from '@/components/ui/CloneButton'
 import { ACTION_ICONS, RowActions } from '@/components/ui/RowActions'
 import { UI_ICONS } from '@/components/layout/icons'
 import { round2 } from '@/lib/format'
@@ -76,6 +77,7 @@ export default function InventoryPage() {
   const [unmarking, setUnmarking] = useState<InventoryItem | null>(null)
   const [viewingConsignment, setViewingConsignment] = useState<InventoryItem | null>(null)
   const [editing, setEditing] = useState<InventoryItem | null>(null)
+  const [cloning, setCloning] = useState<InventoryItem | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [selling, setSelling] = useState<InventoryItem | null>(null)
   const [payingItem, setPayingItem] = useState<InventoryItem | null>(null)
@@ -170,7 +172,7 @@ export default function InventoryPage() {
       title: t('common.actions'),
       key: 'actions',
       align: 'right',
-      width: 220,
+      width: 260,
       fixed: 'right',
       render: (_, row) => (
         <div className="flex items-center justify-end gap-2">
@@ -184,6 +186,13 @@ export default function InventoryPage() {
               {t('inventory.recordPayment')}
             </ActionPill>
           )}
+          <CloneButton
+            onClick={() => {
+              setEditing(null)
+              setCloning(row)
+              setFormOpen(true)
+            }}
+          />
           <RowActions
             actions={[
               {
@@ -219,6 +228,7 @@ export default function InventoryPage() {
                 icon: ACTION_ICONS.edit,
                 onClick: () => {
                   setEditing(row)
+                  setCloning(null)
                   setFormOpen(true)
                 },
               },
@@ -236,6 +246,7 @@ export default function InventoryPage() {
       icon={UI_ICONS.plus}
       onClick={() => {
         setEditing(null)
+        setCloning(null)
         setFormOpen(true)
       }}
     >
@@ -377,10 +388,12 @@ export default function InventoryPage() {
       <InventoryItemModal
         open={formOpen}
         item={editing}
+        cloneFrom={cloning}
         defaultBranchId={branchIds.length === 1 ? branchIds[0] : undefined}
         onClose={() => {
           setFormOpen(false)
           setEditing(null)
+          setCloning(null)
         }}
       />
 

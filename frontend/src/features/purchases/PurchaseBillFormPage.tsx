@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, Button, Skeleton } from 'antd'
@@ -29,12 +29,27 @@ const EMPTY_LINE: PurchaseBillFormValues['lines'][number] = {
   notes: '',
 }
 
+/** A bill id is a cuid — anything else in `?cloneFrom=` (slashes, dots…) is rejected before it can reach a request URL. */
+const BILL_ID_RE = /^[A-Za-z0-9_-]{8,64}$/
+
+const blankValues = (): PurchaseBillFormValues => ({ date: todayIso(), lines: [{ ...EMPTY_LINE, key: localId() }], notes: '' })
+
 export default function PurchaseBillFormPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const notify = useNotify()
   const isEdit = Boolean(id)
+
+  // Clone: `/buying-bills/new?cloneFrom=<billId>` opens the ordinary new-bill form pre-filled from that bill.
+  // It never applies while editing, and it is only a pre-fill — saving goes through the same schema and the same
+  // create endpoint as any new bill.
+  const [searchParams] = useSearchParams()
+  const rawCloneId = isEdit ? null : searchParams.get('cloneFrom')
+  const cloneId = rawCloneId && BILL_ID_RE.test(rawCloneId) ? rawCloneId : null
+  const prefilledFrom = useRef<string | null>(null)
+  const { currentData: cloneSource, isLoading: loadingClone, isError: cloneLoadFailed } = useGetPurchaseBillQuery(cloneId!, { skip: !cloneId })
+  const cloneUnavailable = Boolean(rawCloneId) && (!cloneId || cloneLoadFailed || (Boolean(cloneSource) && !Array.isArray(cloneSource?.lines)))
 
   const { data: existing, isLoading } = useGetPurchaseBillQuery(id!, { skip: !id })
   const { data: suppliers } = useGetSuppliersQuery({ page: 1, pageSize: 0 })
@@ -74,6 +89,42 @@ export default function PurchaseBillFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing])
 
+  // Pre-fill from the source bill exactly once per bill, so a background refetch can never overwrite what's been typed.
+  // What is deliberately NOT copied: chassis and motor numbers (they identify one specific vehicle) and the date
+  // (a new purchase must not silently inherit an old date — the payment ledger is dated by it). Everything else
+  // the form needs is copied as-is, and the user sees it all before saving.
+  useEffect(() => {
+    if (!cloneId || !cloneSource || cloneSource.id !== cloneId || !Array.isArray(cloneSource.lines)) return
+    if (prefilledFrom.current === cloneId) return
+    prefilledFrom.current = cloneId
+    const cloned = cloneSource.lines.map((line) => ({
+      key: localId(),
+      itemName: line.itemName,
+      description: line.description ?? '',
+      supplierId: line.supplierId,
+      chassisNumber: '',
+      motorNumber: '',
+      modelYear: line.modelYear,
+      price: line.price,
+      paidAmount: line.paidAmount,
+      notes: line.notes ?? '',
+    }))
+    form.reset({
+      date: todayIso(),
+      notes: cloneSource.notes ?? '',
+      lines: cloned.length > 0 ? cloned : [{ ...EMPTY_LINE, key: localId() }],
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloneId, cloneSource])
+
+  // Leaving a clone URL for a plain "new bill" in the same page instance must not keep the cloned data around.
+  useEffect(() => {
+    if (cloneId || !prefilledFrom.current) return
+    prefilledFrom.current = null
+    form.reset(blankValues())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloneId])
+
   const total = round2((lines ?? []).reduce((sum, line) => sum + (Number(line.price) || 0), 0))
   const totalPaid = round2((lines ?? []).reduce((sum, line) => sum + (Number(line.paidAmount) || 0), 0))
   const totalOwed = round2(total - totalPaid)
@@ -112,7 +163,7 @@ export default function PurchaseBillFormPage() {
     () => notify.error(t('common.error'), t('messages.saveFailed')),
   )
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 10 }} />
+  if (isLoading || (cloneId && loadingClone)) return <Skeleton active paragraph={{ rows: 10 }} />
 
   const saving = creating || updating
   const lineErrors = form.formState.errors.lines
@@ -135,6 +186,9 @@ export default function PurchaseBillFormPage() {
       />
 
       <div className="space-y-4">
+        {cloneUnavailable && <Alert type="warning" showIcon title={t('purchases.cloneFailed')} />}
+        {cloneId && cloneSource && cloneSource.id === cloneId && !cloneUnavailable && <Alert type="info" showIcon title={t('purchases.cloneNotice', { number: cloneSource.number })} />}
+
         <SectionCard title={t('purchases.view')}>
           <FormRow cols={3}>
             <DateField control={form.control} name="date" label={t('purchases.date')} required maxToday />
