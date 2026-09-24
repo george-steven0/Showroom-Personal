@@ -42,7 +42,8 @@ export class InventoryItemsService {
       ...(branchIds.length ? { branchId: { in: branchIds } } : {}),
       ...(statuses.length ? { status: { in: statuses } } : {}),
       ...(query.consignment ? { isConsignment: query.consignment === 'true' } : {}),
-      ...(query.from && query.to ? { saleDate: { gte: new Date(query.from), lte: new Date(query.to) } } : {}),
+      ...(query.saleFrom && query.saleTo ? { saleDate: { gte: new Date(query.saleFrom), lte: new Date(query.saleTo) } } : {}),
+      ...(query.purchaseFrom && query.purchaseTo ? { createdAt: { gte: new Date(query.purchaseFrom), lte: new Date(query.purchaseTo) } } : {}),
       ...(query.search
         ? {
             OR: [

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import dayjs from 'dayjs'
 import { Button, Select } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
@@ -56,6 +57,7 @@ export default function InventoryPage() {
   const [branchIds, setBranchIds] = useState<string[]>([])
   const [statuses, setStatuses] = useState<InventoryItemStatus[]>([])
   const [consignment, setConsignment] = useState<'true' | 'false' | undefined>()
+  const { value: purchaseRange, setPreset: setPurchaseRangePreset, setCustomRange: setPurchaseCustomRange } = useDateRange('all')
   const { value: saleRange, setPreset: setSaleRangePreset, setCustomRange: setSaleCustomRange } = useDateRange('all')
 
   const query = useTableQuery({ sortBy: 'createdAt', sortOrder: 'descend' })
@@ -64,7 +66,11 @@ export default function InventoryPage() {
     branchId: branchIds.length ? branchIds.join(',') : undefined,
     status: statuses.length ? statuses.join(',') : undefined,
     consignment,
-    ...(saleRange.preset === 'all' ? {} : { from: saleRange.from, to: saleRange.to }),
+    // The sale date is a plain day; the purchase date is a timestamp, so it gets the user's exact start/end of day.
+    ...(saleRange.preset === 'all' ? {} : { saleFrom: saleRange.from, saleTo: saleRange.to }),
+    ...(purchaseRange.preset === 'all'
+      ? {}
+      : { purchaseFrom: dayjs(purchaseRange.from).startOf('day').toISOString(), purchaseTo: dayjs(purchaseRange.to).endOf('day').toISOString() }),
   })
 
   const { data: stats, isLoading: statsLoading } = useGetInventoryStatsQuery({ branchId: branchIds.length ? branchIds.join(',') : undefined })
@@ -162,6 +168,13 @@ export default function InventoryPage() {
       render: (_, row) => renderBalance(row),
     },
     { title: t('common.status'), dataIndex: 'status', render: (value: InventoryItem['status']) => <InventoryStatusTag status={value} /> },
+    {
+      title: t('purchases.date'),
+      dataIndex: 'createdAt',
+      sorter: true,
+      responsive: ['lg'],
+      render: (value: string) => <span className="whitespace-nowrap">{formatDate(value)}</span>,
+    },
     {
       title: t('inventory.saleDate'),
       dataIndex: 'saleDate',
@@ -267,13 +280,7 @@ export default function InventoryPage() {
       <PageHeader
         title={t('inventory.title')}
         subtitle={t('inventory.subtitle')}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted">{t('inventory.saleDate')}</span>
-            <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime dropdownOnly />
-            {addButton}
-          </div>
-        }
+        actions={addButton}
       />
 
       <div className="mb-4">
@@ -333,6 +340,14 @@ export default function InventoryPage() {
           placeholder={t('consignment.label')}
           style={{ minWidth: 180 }}
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">{t('purchases.date')}</span>
+          <DateRangeFilter value={purchaseRange} onPreset={setPurchaseRangePreset} onCustom={setPurchaseCustomRange} allowAllTime dropdownOnly />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">{t('inventory.saleDate')}</span>
+          <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime dropdownOnly />
+        </div>
       </div>
 
       <DataTable<InventoryItem>

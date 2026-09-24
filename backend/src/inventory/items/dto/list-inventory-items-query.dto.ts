@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator'
+import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator'
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto'
 
 export class ListInventoryItemsQueryDto extends PaginationQueryDto {
@@ -17,11 +17,24 @@ export class ListInventoryItemsQueryDto extends PaginationQueryDto {
   @IsIn(['true', 'false'])
   consignment?: 'true' | 'false'
 
+  /** Sale date range — plain days ("2026-09-24"); the sale date is stored as a date only, so a day is compared whole. */
   @IsOptional()
-  @IsString()
-  from?: string
+  @IsDateString()
+  saleFrom?: string
 
   @IsOptional()
-  @IsString()
-  to?: string
+  @IsDateString()
+  saleTo?: string
+
+  /**
+   * Purchase date (when the car was added) range — exact instants (ISO 8601), start and end of the user's day.
+   * That column is a full timestamp, so plain days would drop everything added on the range's last day.
+   */
+  @IsOptional()
+  @IsDateString()
+  purchaseFrom?: string
+
+  @IsOptional()
+  @IsDateString()
+  purchaseTo?: string
 }
