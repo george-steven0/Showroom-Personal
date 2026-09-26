@@ -30,6 +30,14 @@ function resolveStatus(paidAmount: number, agreedPrice: number): 'partial_paid' 
   return paidAmount === agreedPrice ? 'sold' : 'partial_paid'
 }
 
+/** Sale-date and purchase-date range filters, shared by the list and the KPI stats so both always agree. */
+function dateRangeWhere(query: Pick<ListInventoryItemsQueryDto, 'saleFrom' | 'saleTo' | 'purchaseFrom' | 'purchaseTo'>): Prisma.InventoryItemWhereInput {
+  return {
+    ...(query.saleFrom && query.saleTo ? { saleDate: { gte: new Date(query.saleFrom), lte: new Date(query.saleTo) } } : {}),
+    ...(query.purchaseFrom && query.purchaseTo ? { createdAt: { gte: new Date(query.purchaseFrom), lte: new Date(query.purchaseTo) } } : {}),
+  }
+}
+
 @Injectable()
 export class InventoryItemsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -42,8 +50,7 @@ export class InventoryItemsService {
       ...(branchIds.length ? { branchId: { in: branchIds } } : {}),
       ...(statuses.length ? { status: { in: statuses } } : {}),
       ...(query.consignment ? { isConsignment: query.consignment === 'true' } : {}),
-      ...(query.saleFrom && query.saleTo ? { saleDate: { gte: new Date(query.saleFrom), lte: new Date(query.saleTo) } } : {}),
-      ...(query.purchaseFrom && query.purchaseTo ? { createdAt: { gte: new Date(query.purchaseFrom), lte: new Date(query.purchaseTo) } } : {}),
+      ...dateRangeWhere(query),
       ...(query.search
         ? {
             OR: [
@@ -72,10 +79,14 @@ export class InventoryItemsService {
     return paginate(rows, total, query)
   }
 
-  /** Head-counts for the Inventory KPI blocks. `consignment` counts every car carrying the marker, whatever its status — the same rows the "Consignment only" filter shows. */
+  /**
+   * Head-counts for the Inventory KPI blocks, scoped by the same branch and date filters as the list.
+   * `consignment` counts every car carrying the marker, whatever its status — the same rows the "Consignment only" filter shows.
+   * Under a sale-date range, unsold cars have no sale date and so fall out of every count (in stock reads 0) — that's inherent.
+   */
   async stats(query: InventoryStatsQueryDto) {
     const branchIds = query.branchId ? query.branchId.split(',').filter(Boolean) : []
-    const where: Prisma.InventoryItemWhereInput = branchIds.length ? { branchId: { in: branchIds } } : {}
+    const where: Prisma.InventoryItemWhereInput = { ...(branchIds.length ? { branchId: { in: branchIds } } : {}), ...dateRangeWhere(query) }
 
     const [byStatus, consignment] = await Promise.all([
       this.prisma.inventoryItem.groupBy({ by: ['status'], where, _count: { _all: true } }),

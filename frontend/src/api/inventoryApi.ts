@@ -16,6 +16,15 @@ export interface InventoryItemPayload {
   agreedPrice: number
 }
 
+/** The KPI blocks take the same branch and date filters as the list. */
+export interface InventoryStatsParams {
+  branchId?: string
+  saleFrom?: string
+  saleTo?: string
+  purchaseFrom?: string
+  purchaseTo?: string
+}
+
 export interface MarkSoldPayload {
   buyerName: string
   buyerPhone?: string
@@ -59,7 +68,7 @@ export const inventoryApi = baseApi.injectEndpoints({
           ? [...result.rows.map((row) => ({ type: 'InventoryItem' as const, id: row.id })), { type: 'InventoryItem', id: 'LIST' }]
           : [{ type: 'InventoryItem', id: 'LIST' }],
     }),
-    getInventoryStats: builder.query<InventoryStats, { branchId?: string }>({
+    getInventoryStats: builder.query<InventoryStats, InventoryStatsParams>({
       query: (params) => ({ url: '/inventory/items/stats', params }),
       providesTags: [{ type: 'InventoryItem', id: 'LIST' }],
     }),

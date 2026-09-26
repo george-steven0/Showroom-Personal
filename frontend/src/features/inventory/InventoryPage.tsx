@@ -29,7 +29,7 @@ import { UI_ICONS } from '@/components/layout/icons'
 import { round2 } from '@/lib/format'
 import { ConsignmentDrawer } from '@/components/ui/ConsignmentDrawer'
 import { ConsignmentModal } from '@/components/ui/ConsignmentModal'
-import type { ConsignmentPayload, InventoryItem, InventoryItemStatus } from '@/types'
+import type { ConsignmentPayload, DateRangePreset, InventoryItem, InventoryItemStatus } from '@/types'
 import { branchLabel } from './BranchSelect'
 import { InventoryItemModal } from './InventoryItemModal'
 import { MarkSoldModal } from './MarkSoldModal'
@@ -60,20 +60,44 @@ export default function InventoryPage() {
   const { value: purchaseRange, setPreset: setPurchaseRangePreset, setCustomRange: setPurchaseCustomRange } = useDateRange('all')
   const { value: saleRange, setPreset: setSaleRangePreset, setCustomRange: setSaleCustomRange } = useDateRange('all')
 
-  const query = useTableQuery({ sortBy: 'createdAt', sortOrder: 'descend' })
-  const { data, isLoading, isFetching } = useGetInventoryItemsQuery({
-    ...query.params,
-    branchId: branchIds.length ? branchIds.join(',') : undefined,
-    status: statuses.length ? statuses.join(',') : undefined,
-    consignment,
-    // The sale date is a plain day; the purchase date is a timestamp, so it gets the user's exact start/end of day.
+  // The table and the KPI blocks share the branch and date filters, so they always describe the same cars.
+  // The sale date is a plain day; the purchase date is a timestamp, so it gets the user's exact start/end of day.
+  const branchParam = branchIds.length ? branchIds.join(',') : undefined
+  const dateParams = {
     ...(saleRange.preset === 'all' ? {} : { saleFrom: saleRange.from, saleTo: saleRange.to }),
     ...(purchaseRange.preset === 'all'
       ? {}
       : { purchaseFrom: dayjs(purchaseRange.from).startOf('day').toISOString(), purchaseTo: dayjs(purchaseRange.to).endOf('day').toISOString() }),
+  }
+
+  const query = useTableQuery({ sortBy: 'createdAt', sortOrder: 'descend' })
+  const { data, isLoading, isFetching } = useGetInventoryItemsQuery({
+    ...query.params,
+    branchId: branchParam,
+    status: statuses.length ? statuses.join(',') : undefined,
+    consignment,
+    ...dateParams,
   })
 
-  const { data: stats, isLoading: statsLoading } = useGetInventoryStatsQuery({ branchId: branchIds.length ? branchIds.join(',') : undefined })
+  const { data: stats, isLoading: statsLoading } = useGetInventoryStatsQuery({ branchId: branchParam, ...dateParams })
+
+  // Only one of the two dates filters at a time: choosing a range on one puts the other back to "All time".
+  const pickPurchasePreset = (preset: DateRangePreset) => {
+    setPurchaseRangePreset(preset)
+    if (preset !== 'all') setSaleRangePreset('all')
+  }
+  const pickPurchaseCustom = (from: string, to: string) => {
+    setPurchaseCustomRange(from, to)
+    setSaleRangePreset('all')
+  }
+  const pickSalePreset = (preset: DateRangePreset) => {
+    setSaleRangePreset(preset)
+    if (preset !== 'all') setPurchaseRangePreset('all')
+  }
+  const pickSaleCustom = (from: string, to: string) => {
+    setSaleCustomRange(from, to)
+    setPurchaseRangePreset('all')
+  }
 
   const [deleteItem, { isLoading: deleting }] = useDeleteInventoryItemMutation()
   const [markAvailable] = useMarkInventoryItemAvailableMutation()
@@ -342,11 +366,11 @@ export default function InventoryPage() {
         />
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted">{t('purchases.date')}</span>
-          <DateRangeFilter value={purchaseRange} onPreset={setPurchaseRangePreset} onCustom={setPurchaseCustomRange} allowAllTime dropdownOnly />
+          <DateRangeFilter value={purchaseRange} onPreset={pickPurchasePreset} onCustom={pickPurchaseCustom} allowAllTime dropdownOnly />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted">{t('inventory.saleDate')}</span>
-          <DateRangeFilter value={saleRange} onPreset={setSaleRangePreset} onCustom={setSaleCustomRange} allowAllTime dropdownOnly />
+          <DateRangeFilter value={saleRange} onPreset={pickSalePreset} onCustom={pickSaleCustom} allowAllTime dropdownOnly />
         </div>
       </div>
 
