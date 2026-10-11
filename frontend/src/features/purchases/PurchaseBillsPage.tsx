@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Descriptions, Drawer, Table } from 'antd'
+import { Button, Descriptions, Drawer, Table, Tooltip } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
 import { useCancelPurchaseBillMutation, useGetPurchaseBillsQuery } from '@/api/purchaseBillsApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useDateRange } from '@/lib/hooks/useDateRange'
 import { useNotify } from '@/lib/hooks/useNotify'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatMoney, round2 } from '@/lib/format'
 import { DataTable } from '@/components/ui/DataTable'
 import { BillStatusFilter, type BillStatusFilterValue } from '@/components/ui/BillStatusFilter'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -21,6 +21,39 @@ import { UI_ICONS } from '@/components/layout/icons'
 import { usePrintable, PrintButton } from '@/components/print/PrintDocument'
 import type { PurchaseBill } from '@/types'
 import { PurchaseBillPrint } from './PurchaseBillPrint'
+
+/** Compares what was paid across a bill's cars with its total — 'exceeded' when overpaid, 'remaining' when still owed, null when exactly paid. */
+function billPayment(bill: PurchaseBill) {
+  const paid = round2(bill.lines.reduce((sum, line) => sum + line.paidAmount, 0))
+  const diff = round2(paid - bill.total)
+  if (diff > 0) return { kind: 'exceeded' as const, paid, diff }
+  if (diff < 0) return { kind: 'remaining' as const, paid, diff: -diff }
+  return null
+}
+
+/** Exceeded is red, remaining is yellow, both on a semi-transparent tint of their own colour. */
+const PAYMENT_TAG_CLASS = {
+  exceeded: 'bg-danger/15 text-danger ring-danger/30',
+  remaining: 'bg-yellow-400/20 text-yellow-700 ring-yellow-500/40 dark:text-yellow-300',
+} as const
+
+function BillPaymentTag({ bill }: { bill: PurchaseBill }) {
+  const { t } = useTranslation()
+  const payment = billPayment(bill)
+  if (!payment) return null
+  const label = payment.kind === 'exceeded' ? t('purchases.paymentExceeded') : t('purchases.paymentRemaining')
+  const hint = t(payment.kind === 'exceeded' ? 'purchases.paymentExceededHint' : 'purchases.paymentRemainingHint', {
+    paid: formatMoney(payment.paid),
+    diff: formatMoney(payment.diff),
+  })
+  return (
+    <Tooltip title={hint}>
+      <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset ${PAYMENT_TAG_CLASS[payment.kind]}`}>
+        {label}
+      </span>
+    </Tooltip>
+  )
+}
 
 export default function PurchaseBillsPage() {
   const { t } = useTranslation()
@@ -60,9 +93,12 @@ export default function PurchaseBillsPage() {
       dataIndex: 'number',
       sorter: true,
       render: (value: string, row) => (
-        <button type="button" onClick={() => setViewing(row)} className="tnum font-medium text-primary hover:underline">
-          {value}
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setViewing(row)} className="tnum font-medium text-primary hover:underline">
+            {value}
+          </button>
+          <BillPaymentTag bill={row} />
+        </div>
       ),
     },
     { title: t('purchases.date'), dataIndex: 'date', sorter: true, render: (value: string) => <span className="whitespace-nowrap">{formatDate(value)}</span> },

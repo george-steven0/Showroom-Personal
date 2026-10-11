@@ -64,6 +64,9 @@ export class PurchaseBillsService {
 
   async create(dto: CreatePurchaseBillDto, user: RequestUser) {
     return this.prisma.$transaction(async (tx) => {
+      this.assertNoDuplicateWithinLines(dto.lines)
+      await this.assertUniqueAgainstOtherBills(tx, dto.lines)
+
       const supplierIds = [...new Set(dto.lines.map((line) => line.supplierId))]
       const suppliers = await tx.supplier.findMany({ where: { id: { in: supplierIds } } })
       if (suppliers.length !== supplierIds.length) throw new BadRequestException('One or more suppliers were not found')
@@ -91,7 +94,7 @@ export class PurchaseBillsService {
               motorNumber: line.motorNumber,
               modelYear: line.modelYear,
               price: line.price,
-              paidAmount: Math.min(line.paidAmount, line.price),
+              paidAmount: line.paidAmount,
               notes: line.notes,
             })),
           },
@@ -125,6 +128,8 @@ export class PurchaseBillsService {
       const existing = await tx.purchaseBill.findUnique({ where: { id }, include: { lines: true } })
       if (!existing) throw new NotFoundException('Buying bill not found')
       this.assertEditable(existing)
+      this.assertNoDuplicateWithinLines(dto.lines)
+      await this.assertUniqueAgainstOtherBills(tx, dto.lines, id)
 
       const supplierIds = [...new Set(dto.lines.map((line) => line.supplierId))]
       const suppliers = await tx.supplier.findMany({ where: { id: { in: supplierIds } } })
@@ -174,7 +179,7 @@ export class PurchaseBillsService {
               motorNumber: line.motorNumber,
               modelYear: line.modelYear,
               price: line.price,
-              paidAmount: Math.min(line.paidAmount, line.price),
+              paidAmount: line.paidAmount,
               notes: line.notes,
               ...consignmentByChassis.get(line.chassisNumber),
             })),
@@ -283,6 +288,50 @@ export class PurchaseBillsService {
 
       return this.mapLine(updated, updated.purchaseBill, updated.supplier)
     })
+  }
+
+  /**
+   * A chassis or motor number identifies one physical car, so a bill can't list the same one twice — almost
+   * always a copy-paste slip on a cloned or duplicated row. Case-insensitive, same reasoning as the check below.
+   */
+  private assertNoDuplicateWithinLines(lines: { chassisNumber: string; motorNumber: string }[]) {
+    const chassisSeen = new Set<string>()
+    const motorSeen = new Set<string>()
+    for (const line of lines) {
+      const chassis = line.chassisNumber.trim()
+      const motor = line.motorNumber.trim()
+      const chassisKey = chassis.toLowerCase()
+      const motorKey = motor.toLowerCase()
+      if (chassisSeen.has(chassisKey)) throw new BadRequestException(`Chassis number "${chassis}" is used by more than one car in this bill.`)
+      if (motorSeen.has(motorKey)) throw new BadRequestException(`Motor number "${motor}" is used by more than one car in this bill.`)
+      chassisSeen.add(chassisKey)
+      motorSeen.add(motorKey)
+    }
+  }
+
+  /**
+   * Rejects a chassis/motor number already recorded on another *active* bill — a cancelled bill's cars were
+   * never really acquired, so their numbers are free to reuse. `excludeBillId` lets an edit keep its own
+   * numbers (its old lines are about to be deleted and recreated by the caller, not checked against here).
+   * Matching is case-insensitive, compared in JS (see the same note on the Inventory guard) — one query for
+   * every active line, not per submitted line.
+   */
+  private async assertUniqueAgainstOtherBills(tx: Prisma.TransactionClient, lines: { chassisNumber: string; motorNumber: string }[], excludeBillId?: string) {
+    const others = await tx.purchaseBillLine.findMany({
+      where: { purchaseBill: { status: 'active', ...(excludeBillId ? { id: { not: excludeBillId } } : {}) } },
+      select: { chassisNumber: true, motorNumber: true, purchaseBill: { select: { number: true } } },
+    })
+
+    for (const line of lines) {
+      const chassis = line.chassisNumber.trim()
+      const motor = line.motorNumber.trim()
+
+      const chassisDupe = others.find((row) => row.chassisNumber.trim().toLowerCase() === chassis.toLowerCase())
+      if (chassisDupe) throw new BadRequestException(`Chassis number "${chassis}" already exists on bill ${chassisDupe.purchaseBill.number}.`)
+
+      const motorDupe = others.find((row) => row.motorNumber.trim().toLowerCase() === motor.toLowerCase())
+      if (motorDupe) throw new BadRequestException(`Motor number "${motor}" already exists on bill ${motorDupe.purchaseBill.number}.`)
+    }
   }
 
   private assertEditable(bill: PurchaseBill & { lines: PurchaseBillLine[] }) {

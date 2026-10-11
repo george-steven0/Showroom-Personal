@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useTranslation } from 'react-i18next'
-import { useGetAccountsSummaryQuery, useGetOwedToSuppliersQuery, useGetProfitSummaryQuery } from '@/api/accountsApi'
+import { useGetAccountsSummaryQuery, useGetOwedToSuppliersQuery, useGetProfitSummaryQuery, useGetSupplierAdvancesQuery } from '@/api/accountsApi'
 import { useDeleteExpenseMutation, useGetExpensesQuery, useGetExpensesSummaryQuery } from '@/api/expensesApi'
 import { useTableQuery } from '@/lib/hooks/useTableQuery'
 import { useDateRange } from '@/lib/hooks/useDateRange'
@@ -17,7 +17,8 @@ import { EmptyState, PageHeader, SectionCard } from '@/components/ui/primitives'
 import { ACTION_ICONS, RowActions } from '@/components/ui/RowActions'
 import { ChartCard, ProfitTrendChart } from '@/components/charts/Charts'
 import { UI_ICONS } from '@/components/layout/icons'
-import type { Expense, OwedSupplierRow } from '@/types'
+import { PurchaseLineStatusTag } from '@/components/ui/StatusTags'
+import type { Expense, OwedSupplierRow, SupplierAdvanceRow } from '@/types'
 import { AddCapitalModal } from './AddCapitalModal'
 import { ExpenseModal } from './ExpenseModal'
 import { RecordPaymentModal } from './RecordPaymentModal'
@@ -28,6 +29,7 @@ export default function AccountsPage() {
 
   const { data: summary, isLoading: loadingSummary } = useGetAccountsSummaryQuery()
   const { data: owed, isLoading: loadingOwed } = useGetOwedToSuppliersQuery()
+  const { data: advances, isLoading: loadingAdvances } = useGetSupplierAdvancesQuery()
   const { data: profit, isLoading: loadingProfit } = useGetProfitSummaryQuery({ from: range.from, to: range.to })
 
   const [capitalOpen, setCapitalOpen] = useState(false)
@@ -50,6 +52,17 @@ export default function AccountsPage() {
     },
   ]
 
+  const advanceColumns: ColumnsType<SupplierAdvanceRow> = [
+    { title: t('purchases.number'), dataIndex: 'purchaseBillNumber', render: (value: string) => <span className="tnum font-medium text-ink">{value}</span> },
+    { title: t('accounts.item'), dataIndex: 'itemName' },
+    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value}</span> },
+    { title: t('accounts.supplier'), dataIndex: 'supplierName' },
+    { title: t('accounts.cost'), dataIndex: 'price', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} /> },
+    { title: t('accounts.paid'), dataIndex: 'paidAmount', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} /> },
+    { title: t('accounts.advance'), dataIndex: 'advance', align: 'right', render: (value: number) => <Money value={value} strong className="text-danger" /> },
+    { title: t('common.status'), dataIndex: 'status', render: (value: SupplierAdvanceRow['status']) => <PurchaseLineStatusTag status={value} /> },
+  ]
+
   return (
     <>
       <PageHeader title={t('accounts.title')} subtitle={t('accounts.subtitle')} actions={<Button icon={UI_ICONS.plus} onClick={() => setCapitalOpen(true)}>{t('accounts.addCapital')}</Button>} />
@@ -69,6 +82,11 @@ export default function AccountsPage() {
                     amount: formatMoney(summary?.moneyTiedUpInStock ?? 0),
                     count: summary?.carsInStock ?? 0,
                   })}
+                </p>
+              )}
+              {(summary?.totalAdvanceToSuppliers ?? 0) > 0 && (
+                <p className="mt-1 text-xs font-medium text-danger">
+                  {t('accounts.advanceHeldHint', { amount: formatMoney(summary?.totalAdvanceToSuppliers ?? 0) })}
                 </p>
               )}
             </div>
@@ -93,6 +111,13 @@ export default function AccountsPage() {
             icon={UI_ICONS.alert}
             tone={(summary?.totalOwedToSuppliers ?? 0) > 0 ? 'warning' : 'success'}
             loading={loadingSummary}
+            footer={
+              (summary?.totalAdvanceToSuppliers ?? 0) > 0 ? (
+                <span className="text-danger">
+                  {t('accounts.advanceToSuppliers')}: {formatMoney(summary?.totalAdvanceToSuppliers ?? 0)}
+                </span>
+              ) : undefined
+            }
           />
           <KpiCard label={t('accounts.carsInStock')} value={summary?.carsInStock ?? 0} icon={UI_ICONS.car} tone="info" loading={loadingSummary} />
           <KpiCard label={t('accounts.carsSold')} value={summary?.carsSoldCount ?? 0} icon={UI_ICONS.invoice} tone="primary" loading={loadingSummary} />
@@ -114,6 +139,20 @@ export default function AccountsPage() {
           )}
         </SectionCard>
 
+        {(advances ?? []).length > 0 && (
+          <SectionCard title={t('accounts.advancesTitle')} description={t('accounts.advancesHint')}>
+            <Table<SupplierAdvanceRow>
+              rowKey="purchaseLineId"
+              size="small"
+              loading={loadingAdvances}
+              dataSource={advances ?? []}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              columns={advanceColumns}
+            />
+          </SectionCard>
+        )}
+
         <div className="grid gap-4 xl:grid-cols-3">
           <KpiCard
             label={t('accounts.profit')}
@@ -123,9 +162,17 @@ export default function AccountsPage() {
             loading={loadingProfit}
             hint={t('accounts.profitHint')}
             footer={
-              <span className="text-xs text-muted">
-                {t('sales.title')}: {profit?.carsSold ?? 0}
-              </span>
+              <>
+                <span>
+                  {t('accounts.grossProfit')}: <Money value={profit?.grossProfit} />
+                </span>
+                <span className="text-danger">
+                  {t('accounts.expenses')}: −{formatMoney(profit?.totalExpenses ?? 0)}
+                </span>
+                <span>
+                  {t('accounts.carsSoldInPeriod')}: {profit?.carsSold ?? 0}
+                </span>
+              </>
             }
           />
           <div className="xl:col-span-2">

@@ -1,5 +1,5 @@
 import { baseApi } from './baseApi'
-import type { AccountsSummary, OwedSupplierRow, ProfitSummary } from '@/types'
+import type { AccountsSummary, OwedSupplierRow, ProfitSummary, SupplierAdvanceRow } from '@/types'
 
 export const accountsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -11,6 +11,10 @@ export const accountsApi = baseApi.injectEndpoints({
       query: () => '/accounts/owed',
       providesTags: ['Accounts'],
     }),
+    getSupplierAdvances: builder.query<SupplierAdvanceRow[], void>({
+      query: () => '/accounts/supplier-advances',
+      providesTags: ['Accounts'],
+    }),
     getProfitSummary: builder.query<ProfitSummary, { from: string; to: string }>({
       query: (params) => ({ url: '/accounts/profit', params }),
       providesTags: ['Accounts'],
@@ -18,4 +22,4 @@ export const accountsApi = baseApi.injectEndpoints({
   }),
 })
 
-export const { useGetAccountsSummaryQuery, useGetOwedToSuppliersQuery, useGetProfitSummaryQuery } = accountsApi
+export const { useGetAccountsSummaryQuery, useGetOwedToSuppliersQuery, useGetSupplierAdvancesQuery, useGetProfitSummaryQuery } = accountsApi

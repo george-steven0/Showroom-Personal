@@ -17,7 +17,7 @@ export class DashboardService {
     const monthEnd = dayjs().endOf('month')
     const sixMonthsAgo = dayjs().subtract(5, 'month').startOf('month')
 
-    const [summary, monthSellingBills, monthExpenses, purchaseLines, sellingBills, recentTransactions] = await Promise.all([
+    const [summary, monthSellingBills, monthExpenses, purchaseLines, sellingBills, trendExpenses, recentTransactions] = await Promise.all([
       this.accounts.getSummary(),
       this.prisma.sellingBill.findMany({
         where: { status: 'active', sellingDate: { gte: monthStart.toDate(), lte: monthEnd.toDate() } },
@@ -34,6 +34,10 @@ export class DashboardService {
       this.prisma.sellingBill.findMany({
         where: { status: 'active', sellingDate: { gte: sixMonthsAgo.toDate() } },
         select: { sellingPrice: true, profit: true, sellingDate: true },
+      }),
+      this.prisma.expense.findMany({
+        where: { date: { gte: sixMonthsAgo.toDate() } },
+        select: { date: true, amount: true },
       }),
       this.prisma.cashTransaction.findMany({ orderBy: { createdAt: 'desc' }, take: 8 }),
     ])
@@ -53,6 +57,11 @@ export class DashboardService {
       sellsByMonth.set(key, round2((sellsByMonth.get(key) ?? 0) + bill.sellingPrice))
       profitByMonth.set(key, round2((profitByMonth.get(key) ?? 0) + bill.profit))
     }
+    // Profit is net of expenses everywhere — each expense counts in the month of its own date.
+    for (const expense of trendExpenses) {
+      const key = bucketKey(expense.date, 'month')
+      profitByMonth.set(key, round2((profitByMonth.get(key) ?? 0) - expense.amount))
+    }
 
     const profitTrend = months.map((key) => ({ bucket: bucketLabel(key, 'month'), profit: profitByMonth.get(key) ?? 0 }))
     const buysVsSells = months.map((key) => ({
@@ -65,7 +74,7 @@ export class DashboardService {
       totalCapital: summary.totalCapital,
       totalOwedToSuppliers: summary.totalOwedToSuppliers,
       carsInStock: summary.carsInStock,
-      profitThisMonth: round2(monthSellingBills.reduce((sum, bill) => sum + bill.profit, 0)),
+      profitThisMonth: round2(monthSellingBills.reduce((sum, bill) => sum + bill.profit, 0) - (monthExpenses._sum.amount ?? 0)),
       expensesThisMonth: round2(monthExpenses._sum.amount ?? 0),
       profitTrend,
       buysVsSells,

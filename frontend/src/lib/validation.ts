@@ -49,10 +49,6 @@ export function purchaseLineSchema(t: TFunction) {
       paidAmount: z.number({ message: t('validation.amountNonNegative') }).min(0, t('validation.amountNonNegative')),
       notes: z.string().trim().optional(),
     })
-    .refine((line) => line.paidAmount <= line.price, {
-      message: t('validation.paidExceedsPrice'),
-      path: ['paidAmount'],
-    })
 }
 
 export function purchaseBillSchema(t: TFunction) {

@@ -172,9 +172,25 @@ export interface OwedSupplierRow {
   purchaseBillNumber: string
 }
 
+/** A car paid for above its price — `advance` is the extra the supplier is holding. */
+export interface SupplierAdvanceRow {
+  purchaseLineId: string
+  itemName: string
+  chassisNumber: string
+  supplierId: string
+  supplierName: string
+  price: number
+  paidAmount: number
+  advance: number
+  status: PurchaseLineStatus
+  purchaseDate: string
+  purchaseBillNumber: string
+}
+
 export interface AccountsSummary {
   totalCapital: number
   totalOwedToSuppliers: number
+  totalAdvanceToSuppliers: number
   carsInStock: number
   carsSoldCount: number
   totalMoneyAllTime: number
@@ -182,7 +198,11 @@ export interface AccountsSummary {
 }
 
 export interface ProfitSummary {
+  /** Net: gross profit minus expenses dated in the period. */
   totalProfit: number
+  grossProfit: number
+  totalExpenses: number
+  expensesCount: number
   totalRevenue: number
   totalCost: number
   carsSold: number

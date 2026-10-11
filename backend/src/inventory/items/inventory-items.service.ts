@@ -103,7 +103,8 @@ export class InventoryItemsService {
     }
   }
 
-  create(dto: CreateInventoryItemDto, user: RequestUser) {
+  async create(dto: CreateInventoryItemDto, user: RequestUser) {
+    await this.assertUniqueVehicleNumbers(dto.chassisNumber, dto.motorNumber)
     const { rest, consignment } = splitConsignment(dto)
     return this.prisma.inventoryItem.create({
       data: { ...rest, ...consignment, createdBy: user.id, createdByName: user.fullName },
@@ -113,6 +114,7 @@ export class InventoryItemsService {
 
   async update(id: string, dto: UpdateInventoryItemDto, user: RequestUser) {
     await this.findOrThrow(id)
+    await this.assertUniqueVehicleNumbers(dto.chassisNumber, dto.motorNumber, id)
     const { rest, consignment } = splitConsignment(dto)
     return this.prisma.inventoryItem.update({
       where: { id },
@@ -234,6 +236,33 @@ export class InventoryItemsService {
       },
       include: { branch: true },
     })
+  }
+
+  /**
+   * A chassis or motor number identifies one physical car, so reusing one already on file is a data-entry
+   * mistake, not a legitimate case — this rejects it before anything is written. Blank values are exempt
+   * (both fields are optional here); `excludeId` lets an edit keep the row's own numbers. Matching is
+   * case-insensitive (compared in JS, since SQLite's case-insensitive mode isn't available through Prisma)
+   * so "abc123" and "ABC123" are still caught as the same car — the dataset here is small enough that
+   * fetching every existing number to compare costs nothing.
+   */
+  private async assertUniqueVehicleNumbers(chassisNumber: string | undefined, motorNumber: string | undefined, excludeId?: string) {
+    const chassis = chassisNumber?.trim()
+    const motor = motorNumber?.trim()
+    if (!chassis && !motor) return
+
+    const others = await this.prisma.inventoryItem.findMany({
+      where: excludeId ? { id: { not: excludeId } } : {},
+      select: { chassisNumber: true, motorNumber: true },
+    })
+    const clashesWith = (value: string, existing: string | null) => existing != null && existing.trim().toLowerCase() === value.toLowerCase()
+
+    if (chassis && others.some((row) => clashesWith(chassis, row.chassisNumber))) {
+      throw new BadRequestException(`A car with chassis number "${chassis}" already exists in inventory.`)
+    }
+    if (motor && others.some((row) => clashesWith(motor, row.motorNumber))) {
+      throw new BadRequestException(`A car with motor number "${motor}" already exists in inventory.`)
+    }
   }
 
   private async findOrThrow(id: string) {

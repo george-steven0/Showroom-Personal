@@ -16,6 +16,11 @@ export class AccountsController {
     return this.accounts.getOwed()
   }
 
+  @Get('supplier-advances')
+  getSupplierAdvances() {
+    return this.accounts.getSupplierAdvances()
+  }
+
   @Get('profit')
   getProfit(@Query() query: ProfitQueryDto) {
     return this.accounts.getProfitSummary(query)
