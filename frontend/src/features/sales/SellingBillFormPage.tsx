@@ -50,7 +50,7 @@ export default function SellingBillFormPage() {
     value: line.id,
     label: (
       <>
-        {line.itemName} — <span className="ltr-code">{line.chassisNumber}</span>
+        {line.itemName} — {line.chassisNumber ? <span className="ltr-code">{line.chassisNumber}</span> : <span className="text-info">{t('missingInfo.noChassis')}</span>}
       </>
     ),
     searchText: `${line.itemName} ${line.chassisNumber}`,

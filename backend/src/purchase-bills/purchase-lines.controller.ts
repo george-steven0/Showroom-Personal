@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common'
 import { PurchaseBillsService } from './purchase-bills.service'
 import { SettlePaymentDto } from './dto/settle-payment.dto'
 import { SetConsignmentDto } from '../common/dto/set-consignment.dto'
+import { UpdateLineDetailsDto } from './dto/update-line-details.dto'
 import { CurrentUser, type RequestUser } from '../common/decorators/current-user.decorator'
 
 /** `status=in_stock` is the only case this app needs — the selling-bill form's car picker. */
@@ -12,6 +13,11 @@ export class PurchaseLinesController {
   @Get()
   listAvailable() {
     return this.purchaseBills.listAvailableLines()
+  }
+
+  @Patch(':id/details')
+  updateDetails(@Param('id') id: string, @Body() dto: UpdateLineDetailsDto, @CurrentUser() user: RequestUser) {
+    return this.purchaseBills.updateLineDetails(id, dto, user)
   }
 
   @Patch(':id/consignment')

@@ -20,6 +20,9 @@ import { UI_ICONS } from '@/components/layout/icons'
 import { usePrintable, PrintButton } from '@/components/print/PrintDocument'
 import type { SellingBill } from '@/types'
 import { SellingBillPrint } from './SellingBillPrint'
+import { MissingInfoTag, MissingValue } from '@/components/ui/MissingInfoTag'
+import { CarDetailsModal, type CarDetailsTarget } from '@/components/ui/CarDetailsModal'
+import { describeMissingForCar } from '@/lib/missingInfo'
 
 export default function SellingBillsPage() {
   const { t } = useTranslation()
@@ -36,7 +39,10 @@ export default function SellingBillsPage() {
   })
   const [cancelBill, { isLoading: cancelling }] = useCancelSellingBillMutation()
 
-  const [viewing, setViewing] = useState<SellingBill | null>(null)
+  const [viewingSnapshot, setViewing] = useState<SellingBill | null>(null)
+  // Follow the freshest copy, so the drawer shows car details filled in while it's open.
+  const viewing = viewingSnapshot ? (data?.rows.find((row) => row.id === viewingSnapshot.id) ?? viewingSnapshot) : null
+  const [editingCar, setEditingCar] = useState<CarDetailsTarget | null>(null)
   const [target, setTarget] = useState<SellingBill | null>(null)
   const { ref: printRef, print } = usePrintable(viewing?.number ?? 'selling-bill')
 
@@ -57,9 +63,12 @@ export default function SellingBillsPage() {
       dataIndex: 'number',
       sorter: true,
       render: (value: string, row) => (
-        <button type="button" onClick={() => setViewing(row)} className="tnum font-medium text-primary hover:underline">
-          {value}
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setViewing(row)} className="tnum font-medium text-primary hover:underline">
+            {value}
+          </button>
+          <MissingInfoTag items={describeMissingForCar(row, t)} />
+        </div>
       ),
     },
     { title: t('purchases.itemName'), dataIndex: 'itemName' },
@@ -85,6 +94,14 @@ export default function SellingBillsPage() {
               icon: ACTION_ICONS.edit,
               hidden: row.status !== 'active',
               onClick: () => navigate(`/selling-bills/${row.id}/edit`),
+            },
+            {
+              key: 'details',
+              label: t('missingInfo.editDetails'),
+              icon: ACTION_ICONS.edit,
+              hidden: row.status !== 'active',
+              onClick: () =>
+                setEditingCar({ lineId: row.purchaseLineId, itemName: row.itemName, chassisNumber: row.chassisNumber, motorNumber: row.motorNumber, modelYear: row.modelYear }),
             },
             { key: 'cancel', label: t('common.delete'), icon: ACTION_ICONS.delete, danger: true, hidden: row.status === 'cancelled', onClick: () => setTarget(row) },
           ]}
@@ -149,7 +166,7 @@ export default function SellingBillsPage() {
         {viewing && (
           <dl className="grid grid-cols-2 gap-4">
             <Field label={t('purchases.itemName')} value={viewing.itemName} />
-            <Field label={t('purchases.chassisNumber')} value={viewing.chassisNumber} mono />
+            <Field label={t('purchases.chassisNumber')} value={viewing.chassisNumber || <MissingValue />} mono />
             <Field label={t('sales.supplier')} value={viewing.supplierName} />
             <Field label={t('sales.buyingDate')} value={formatDate(viewing.buyingDate)} />
             <Field label={t('sales.buyingPrice')} value={<Money value={viewing.buyingPrice} />} mono />
@@ -163,6 +180,8 @@ export default function SellingBillsPage() {
           </dl>
         )}
       </Drawer>
+
+      <CarDetailsModal car={editingCar} onClose={() => setEditingCar(null)} />
 
       <div className="hidden">{viewing && <SellingBillPrint ref={printRef} bill={viewing} />}</div>
 

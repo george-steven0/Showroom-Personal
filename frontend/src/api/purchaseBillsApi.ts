@@ -2,6 +2,8 @@ import { baseApi } from './baseApi'
 import type { ConsignmentPayload, ListQuery, Paginated, PurchaseBill, PurchaseBillLine } from '@/types'
 
 export interface PurchaseLinePayload {
+  /** Only on edit: the existing line this row replaces. */
+  id?: string
   itemName: string
   description?: string
   supplierId: string
@@ -66,6 +68,13 @@ export const purchaseBillsApi = baseApi.injectEndpoints({
       query: ({ id, body }) => ({ url: `/purchase-bill-lines/${id}/consignment`, method: 'PATCH', body }),
       invalidatesTags: [{ type: 'PurchaseLine', id: 'LIST' }, { type: 'PurchaseBill', id: 'LIST' }],
     }),
+    updateLineDetails: builder.mutation<
+      { line: PurchaseBillLine; syncedSellingBills: number },
+      { id: string; body: { chassisNumber: string; motorNumber: string; modelYear: number | null } }
+    >({
+      query: ({ id, body }) => ({ url: `/purchase-bill-lines/${id}/details`, method: 'PATCH', body }),
+      invalidatesTags: [{ type: 'PurchaseBill', id: 'LIST' }, { type: 'PurchaseLine', id: 'LIST' }, { type: 'SellingBill', id: 'LIST' }, 'Accounts'],
+    }),
     settlePayment: builder.mutation<PurchaseBillLine, { id: string; amount: number; date: string; note?: string }>({
       query: ({ id, ...body }) => ({ url: `/purchase-bill-lines/${id}/settle-payment`, method: 'POST', body }),
       invalidatesTags: [{ type: 'PurchaseBill', id: 'LIST' }, 'Accounts', 'Dashboard', 'CashTransaction'],
@@ -81,5 +90,6 @@ export const {
   useCancelPurchaseBillMutation,
   useGetAvailablePurchaseLinesQuery,
   useSetLineConsignmentMutation,
+  useUpdateLineDetailsMutation,
   useSettlePaymentMutation,
 } = purchaseBillsApi

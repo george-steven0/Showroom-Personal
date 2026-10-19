@@ -73,8 +73,6 @@
     "phoneInvalid": "Enter a valid phone number",
     "itemRequired": "Item name is required",
     "supplierRequired": "Supplier is required",
-    "chassisRequired": "Chassis number is required",
-    "motorRequired": "Motor number is required",
     "yearInvalid": "Enter a valid year (up to {{max}})",
     "pricePositive": "Price must be greater than 0",
     "amountNonNegative": "Amount cannot be negative",
@@ -386,6 +384,23 @@
     "english": "English",
     "arabic": "العربية",
     "label": "Language"
+  },
+  "missingInfo": {
+    "tag": "Missing info",
+    "missing": "Missing",
+    "fields": { "chassisNumber": "chassis number" },
+    "carField": "Car #{{n}} ({{item}}): {{field}}",
+    "chassisHint": "Missing — you can save now and add it later.",
+    "confirmTitle": "Save with missing info?",
+    "confirmBody": "These details are missing. You can save now and add them later — the bill is tagged \"Missing info\" until you do.",
+    "saveAnyway": "Save anyway",
+    "goBack": "Go back",
+    "editDetails": "Edit car details",
+    "editTitle": "Car details — {{item}}",
+    "editHint": "Fill in or correct the chassis / motor number. This works even if the car is already sold — its selling bill is updated too.",
+    "saved": "Car details saved",
+    "syncedSales": "Also updated on {{count}} selling bill(s).",
+    "noChassis": "no chassis number"
   },
   "consignment": {
     "label": "Consignment",

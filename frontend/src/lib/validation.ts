@@ -33,11 +33,14 @@ export function purchaseLineSchema(t: TFunction) {
   return z
     .object({
       key: z.string(),
+      /** The existing line this row edits, so the backend can keep per-car data (consignment) across the full replace. */
+      lineId: z.string().optional(),
       itemName: z.string().trim().min(2, t('validation.itemRequired')),
       description: z.string().trim().optional(),
       supplierId: z.string().min(1, t('validation.supplierRequired')),
-      chassisNumber: z.string().trim().min(1, t('validation.chassisRequired')),
-      motorNumber: z.string().trim().min(1, t('validation.motorRequired')),
+      // Chassis may be saved blank (warned about before saving, tagged "Missing info"); motor is plainly optional.
+      chassisNumber: z.string().trim(),
+      motorNumber: z.string().trim(),
       modelYear: z
         .number()
         .int()
@@ -49,6 +52,21 @@ export function purchaseLineSchema(t: TFunction) {
       paidAmount: z.number({ message: t('validation.amountNonNegative') }).min(0, t('validation.amountNonNegative')),
       notes: z.string().trim().optional(),
     })
+}
+
+/** Chassis / motor / model year of one bought car, edited in place (works after it's sold). */
+export function lineDetailsSchema(t: TFunction) {
+  return z.object({
+    chassisNumber: z.string().trim(),
+    motorNumber: z.string().trim(),
+    modelYear: z
+      .number()
+      .int()
+      .min(1950, t('validation.yearInvalid', { max: CURRENT_YEAR }))
+      .max(CURRENT_YEAR, t('validation.yearInvalid', { max: CURRENT_YEAR }))
+      .nullable()
+      .optional(),
+  })
 }
 
 export function purchaseBillSchema(t: TFunction) {
@@ -198,6 +216,7 @@ export function settingsSchema(t: TFunction) {
 export type LoginFormValues = z.infer<ReturnType<typeof loginSchema>>
 export type SupplierFormValues = z.infer<ReturnType<typeof supplierSchema>>
 export type PurchaseLineFormValues = z.infer<ReturnType<typeof purchaseLineSchema>>
+export type LineDetailsFormValues = z.infer<ReturnType<typeof lineDetailsSchema>>
 export type PurchaseBillFormValues = z.infer<ReturnType<typeof purchaseBillSchema>>
 export type SellingBillFormValues = z.infer<ReturnType<typeof sellingBillSchema>>
 export type ExpenseFormValues = z.infer<ReturnType<typeof expenseSchema>>

@@ -37,7 +37,7 @@ export default function AccountsPage() {
 
   const owedColumns: ColumnsType<OwedSupplierRow> = [
     { title: t('accounts.item'), dataIndex: 'itemName', render: (value: string) => <span className="font-medium text-ink">{value}</span> },
-    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value}</span> },
+    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value || '—'}</span> },
     { title: t('accounts.supplier'), dataIndex: 'supplierName' },
     { title: t('accounts.cost'), dataIndex: 'price', align: 'right', render: (value: number) => <Money value={value} /> },
     { title: t('accounts.paid'), dataIndex: 'paidAmount', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} className="text-success" /> },
@@ -55,7 +55,7 @@ export default function AccountsPage() {
   const advanceColumns: ColumnsType<SupplierAdvanceRow> = [
     { title: t('purchases.number'), dataIndex: 'purchaseBillNumber', render: (value: string) => <span className="tnum font-medium text-ink">{value}</span> },
     { title: t('accounts.item'), dataIndex: 'itemName' },
-    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value}</span> },
+    { title: t('accounts.chassis'), dataIndex: 'chassisNumber', responsive: ['md'], render: (value: string) => <span className="tnum ltr-code text-muted">{value || '—'}</span> },
     { title: t('accounts.supplier'), dataIndex: 'supplierName' },
     { title: t('accounts.cost'), dataIndex: 'price', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} /> },
     { title: t('accounts.paid'), dataIndex: 'paidAmount', align: 'right', responsive: ['lg'], render: (value: number) => <Money value={value} /> },

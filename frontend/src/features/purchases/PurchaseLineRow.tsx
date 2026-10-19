@@ -29,6 +29,7 @@ export function PurchaseLineRow({
   const { t } = useTranslation()
 
   const price = useWatch({ control, name: `lines.${index}.price` })
+  const chassis = useWatch({ control, name: `lines.${index}.chassisNumber` })
   // Tracks the price we last auto-copied into paidAmount, so we can tell
   // "still following price" apart from "the owner typed a different paid
   // amount on purpose" — most buying bills are paid in full, but a
@@ -71,8 +72,13 @@ export function PurchaseLineRow({
       <FormRow cols={3}>
         <TextField control={control} name={`lines.${index}.itemName`} label={t('purchases.itemName')} required placeholder="BMW X5 2020" />
         <SelectField control={control} name={`lines.${index}.supplierId`} label={t('purchases.supplier')} required options={supplierOptions} />
-        <TextField control={control} name={`lines.${index}.chassisNumber`} label={t('purchases.chassisNumber')} required />
-        <TextField control={control} name={`lines.${index}.motorNumber`} label={t('purchases.motorNumber')} required />
+        <TextField
+          control={control}
+          name={`lines.${index}.chassisNumber`}
+          label={t('purchases.chassisNumber')}
+          hint={!chassis?.trim() ? <span className="text-info">{t('missingInfo.chassisHint')}</span> : undefined}
+        />
+        <TextField control={control} name={`lines.${index}.motorNumber`} label={t('purchases.motorNumber')} />
         <NumberField
           control={control}
           name={`lines.${index}.modelYear`}

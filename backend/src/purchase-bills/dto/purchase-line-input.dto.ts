@@ -16,13 +16,14 @@ export class PurchaseLineInputDto {
   @IsNotEmpty({ message: 'Supplier is required' })
   supplierId!: string
 
+  /** Can be left blank when the papers aren't in yet — stored as '' and flagged as missing info until filled in. */
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Chassis number is required' })
-  chassisNumber!: string
+  chassisNumber?: string
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Motor number is required' })
-  motorNumber!: string
+  motorNumber?: string
 
   @IsOptional()
   @Type(() => Number)

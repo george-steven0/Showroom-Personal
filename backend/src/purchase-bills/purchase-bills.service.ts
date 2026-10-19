@@ -7,6 +7,7 @@ import { round2 } from '../common/money'
 import { nextBillNumber } from '../common/bill-number'
 import type { CreatePurchaseBillDto } from './dto/create-purchase-bill.dto'
 import type { UpdatePurchaseBillDto } from './dto/update-purchase-bill.dto'
+import type { UpdateLineDetailsDto } from './dto/update-line-details.dto'
 import type { ListPurchaseBillsQueryDto } from './dto/list-purchase-bills-query.dto'
 import type { SettlePaymentDto } from './dto/settle-payment.dto'
 import type { RequestUser } from '../common/decorators/current-user.decorator'
@@ -16,6 +17,12 @@ import { consignmentData } from '../common/consignment'
 const SORTABLE_FIELDS: Record<string, string> = { number: 'number', date: 'date', total: 'total' }
 
 type LineWithSupplier = PurchaseBillLine & { supplier: Supplier }
+type VehicleNumbers = { chassisNumber?: string | null; motorNumber?: string | null }
+
+/** Chassis / motor numbers are stored trimmed, with '' meaning "not known yet" (missing info). */
+function cleanNumber(value: string | null | undefined): string {
+  return (value ?? '').trim()
+}
 type BillWithLines = PurchaseBill & { lines: LineWithSupplier[] }
 
 @Injectable()
@@ -90,8 +97,8 @@ export class PurchaseBillsService {
               itemName: line.itemName,
               description: line.description,
               supplierId: line.supplierId,
-              chassisNumber: line.chassisNumber,
-              motorNumber: line.motorNumber,
+              chassisNumber: cleanNumber(line.chassisNumber),
+              motorNumber: cleanNumber(line.motorNumber),
               modelYear: line.modelYear,
               price: line.price,
               paidAmount: line.paidAmount,
@@ -128,8 +135,10 @@ export class PurchaseBillsService {
       const existing = await tx.purchaseBill.findUnique({ where: { id }, include: { lines: true } })
       if (!existing) throw new NotFoundException('Buying bill not found')
       this.assertEditable(existing)
+      const existingIds = new Set(existing.lines.map((line) => line.id))
+      if (dto.lines.some((line) => line.id && !existingIds.has(line.id))) throw new BadRequestException('A car in this bill does not belong to it')
       this.assertNoDuplicateWithinLines(dto.lines)
-      await this.assertUniqueAgainstOtherBills(tx, dto.lines, id)
+      await this.assertUniqueAgainstOtherBills(tx, dto.lines, { excludeBillId: id })
 
       const supplierIds = [...new Set(dto.lines.map((line) => line.supplierId))]
       const suppliers = await tx.supplier.findMany({ where: { id: { in: supplierIds } } })
@@ -137,22 +146,30 @@ export class PurchaseBillsService {
       const supplierById = new Map(suppliers.map((s) => [s.id, s]))
 
       const date = new Date(dto.date)
-      // Lines are replaced wholesale below, so carry the consignment marker and its details over by chassis number.
-      const consignmentByChassis = new Map(
-        existing.lines
-          .filter((line) => line.isConsignment)
-          .map((line) => [
-            line.chassisNumber,
-            {
+      // Lines are replaced wholesale below, so carry the consignment marker and its details over — by the
+      // line's own id when the form sent it, otherwise by (non-blank) chassis number.
+      const consignmentEntries = existing.lines
+        .filter((line) => line.isConsignment)
+        .map((line) => [
+          line,
+          {
               isConsignment: true,
               consignmentTraderName: line.consignmentTraderName,
               consignmentDate: line.consignmentDate,
               consignmentAddress: line.consignmentAddress,
               consignmentPaidAmount: line.consignmentPaidAmount,
-              consignmentNotes: line.consignmentNotes,
-            },
-          ]),
+            consignmentNotes: line.consignmentNotes,
+          },
+        ] as const)
+      const consignmentById = new Map(consignmentEntries.map(([line, data]) => [line.id, data]))
+      const consignmentByChassis = new Map(
+        consignmentEntries.filter(([line]) => line.chassisNumber.trim() !== '').map(([line, data]) => [line.chassisNumber.trim().toLowerCase(), data]),
       )
+      const carriedConsignment = (line: { id?: string; chassisNumber?: string }) => {
+        if (line.id) return consignmentById.get(line.id)
+        const chassis = cleanNumber(line.chassisNumber)
+        return chassis ? consignmentByChassis.get(chassis.toLowerCase()) : undefined
+      }
       for (const line of existing.lines) {
         await this.ledger.reverseEntriesForReference(tx, line.id, { date, createdBy: user.id, createdByName: user.fullName })
       }
@@ -175,13 +192,13 @@ export class PurchaseBillsService {
               itemName: line.itemName,
               description: line.description,
               supplierId: line.supplierId,
-              chassisNumber: line.chassisNumber,
-              motorNumber: line.motorNumber,
+              chassisNumber: cleanNumber(line.chassisNumber),
+              motorNumber: cleanNumber(line.motorNumber),
               modelYear: line.modelYear,
               price: line.price,
               paidAmount: line.paidAmount,
               notes: line.notes,
-              ...consignmentByChassis.get(line.chassisNumber),
+              ...carriedConsignment(line),
             })),
           },
         },
@@ -236,6 +253,51 @@ export class PurchaseBillsService {
       orderBy: { createdAt: 'desc' },
     })
     return lines.map((line) => this.mapLine(line, line.purchaseBill, line.supplier))
+  }
+
+  /**
+   * Fills in or corrects a car's chassis / motor number and model year in place — allowed even after the car
+   * is sold, unlike a full bill edit. Money, supplier and ledger are untouched. Every selling bill for this car
+   * carries a copy of these details, so they're updated in the same transaction and never drift apart.
+   */
+  async updateLineDetails(lineId: string, dto: UpdateLineDetailsDto, user: RequestUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const line = await tx.purchaseBillLine.findUnique({ where: { id: lineId }, include: { purchaseBill: true } })
+      if (!line) throw new NotFoundException('Car not found')
+      if (line.purchaseBill.status !== 'active') throw new BadRequestException('This buying bill has been cancelled')
+
+      const details = {
+        chassisNumber: dto.chassisNumber === undefined ? line.chassisNumber : cleanNumber(dto.chassisNumber),
+        motorNumber: dto.motorNumber === undefined ? line.motorNumber : cleanNumber(dto.motorNumber),
+        modelYear: dto.modelYear === undefined ? line.modelYear : dto.modelYear,
+      }
+      // Only numbers that actually change are checked, so fixing a model year isn't blocked by an old duplicate.
+      const changed = (next: string, current: string) => next.toLowerCase() !== current.trim().toLowerCase()
+      await this.assertUniqueAgainstOtherBills(
+        tx,
+        [
+          {
+            chassisNumber: changed(details.chassisNumber, line.chassisNumber) ? details.chassisNumber : '',
+            motorNumber: changed(details.motorNumber, line.motorNumber) ? details.motorNumber : '',
+          },
+        ],
+        { excludeLineId: lineId },
+      )
+
+      const now = new Date()
+      const updated = await tx.purchaseBillLine.update({
+        where: { id: lineId },
+        data: details,
+        include: { supplier: true, purchaseBill: true },
+      })
+      await tx.purchaseBill.update({ where: { id: line.purchaseBillId }, data: { updatedAt: now, updatedBy: user.id, updatedByName: user.fullName } })
+      const synced = await tx.sellingBill.updateMany({
+        where: { purchaseLineId: lineId },
+        data: { ...details, updatedAt: now, updatedBy: user.id, updatedByName: user.fullName },
+      })
+
+      return { line: this.mapLine(updated, updated.purchaseBill, updated.supplier), syncedSellingBills: synced.count }
+    })
   }
 
   /** Marks, edits the details of, or clears a car's consignment. No ledger, price or status effect, so it only needs the car to still be in stock. */
@@ -294,42 +356,49 @@ export class PurchaseBillsService {
    * A chassis or motor number identifies one physical car, so a bill can't list the same one twice — almost
    * always a copy-paste slip on a cloned or duplicated row. Case-insensitive, same reasoning as the check below.
    */
-  private assertNoDuplicateWithinLines(lines: { chassisNumber: string; motorNumber: string }[]) {
+  private assertNoDuplicateWithinLines(lines: VehicleNumbers[]) {
     const chassisSeen = new Set<string>()
     const motorSeen = new Set<string>()
     for (const line of lines) {
-      const chassis = line.chassisNumber.trim()
-      const motor = line.motorNumber.trim()
-      const chassisKey = chassis.toLowerCase()
-      const motorKey = motor.toLowerCase()
-      if (chassisSeen.has(chassisKey)) throw new BadRequestException(`Chassis number "${chassis}" is used by more than one car in this bill.`)
-      if (motorSeen.has(motorKey)) throw new BadRequestException(`Motor number "${motor}" is used by more than one car in this bill.`)
-      chassisSeen.add(chassisKey)
-      motorSeen.add(motorKey)
+      const chassis = cleanNumber(line.chassisNumber)
+      const motor = cleanNumber(line.motorNumber)
+      if (chassis) {
+        if (chassisSeen.has(chassis.toLowerCase())) throw new BadRequestException(`Chassis number "${chassis}" is used by more than one car in this bill.`)
+        chassisSeen.add(chassis.toLowerCase())
+      }
+      if (motor) {
+        if (motorSeen.has(motor.toLowerCase())) throw new BadRequestException(`Motor number "${motor}" is used by more than one car in this bill.`)
+        motorSeen.add(motor.toLowerCase())
+      }
     }
   }
 
   /**
    * Rejects a chassis/motor number already recorded on another *active* bill — a cancelled bill's cars were
    * never really acquired, so their numbers are free to reuse. `excludeBillId` lets an edit keep its own
-   * numbers (its old lines are about to be deleted and recreated by the caller, not checked against here).
+   * numbers (its old lines are about to be deleted and recreated by the caller, not checked against here);
+   * `excludeLineId` does the same for a single car whose details are being edited in place.
    * Matching is case-insensitive, compared in JS (see the same note on the Inventory guard) — one query for
-   * every active line, not per submitted line.
+   * every active line, not per submitted line. A blank number is "missing", never a duplicate.
    */
-  private async assertUniqueAgainstOtherBills(tx: Prisma.TransactionClient, lines: { chassisNumber: string; motorNumber: string }[], excludeBillId?: string) {
+  private async assertUniqueAgainstOtherBills(tx: Prisma.TransactionClient, lines: VehicleNumbers[], exclude: { excludeBillId?: string; excludeLineId?: string } = {}) {
     const others = await tx.purchaseBillLine.findMany({
-      where: { purchaseBill: { status: 'active', ...(excludeBillId ? { id: { not: excludeBillId } } : {}) } },
+      where: {
+        purchaseBill: { status: 'active', ...(exclude.excludeBillId ? { id: { not: exclude.excludeBillId } } : {}) },
+        ...(exclude.excludeLineId ? { id: { not: exclude.excludeLineId } } : {}),
+      },
       select: { chassisNumber: true, motorNumber: true, purchaseBill: { select: { number: true } } },
     })
+    const same = (stored: string, value: string) => stored.trim().toLowerCase() === value.toLowerCase()
 
     for (const line of lines) {
-      const chassis = line.chassisNumber.trim()
-      const motor = line.motorNumber.trim()
+      const chassis = cleanNumber(line.chassisNumber)
+      const motor = cleanNumber(line.motorNumber)
 
-      const chassisDupe = others.find((row) => row.chassisNumber.trim().toLowerCase() === chassis.toLowerCase())
+      const chassisDupe = chassis ? others.find((row) => same(row.chassisNumber, chassis)) : undefined
       if (chassisDupe) throw new BadRequestException(`Chassis number "${chassis}" already exists on bill ${chassisDupe.purchaseBill.number}.`)
 
-      const motorDupe = others.find((row) => row.motorNumber.trim().toLowerCase() === motor.toLowerCase())
+      const motorDupe = motor ? others.find((row) => same(row.motorNumber, motor)) : undefined
       if (motorDupe) throw new BadRequestException(`Motor number "${motor}" already exists on bill ${motorDupe.purchaseBill.number}.`)
     }
   }

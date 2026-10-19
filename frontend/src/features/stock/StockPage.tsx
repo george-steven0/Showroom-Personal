@@ -15,6 +15,9 @@ import { ConsignmentTag } from '@/components/ui/StatusTags'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { ConsignmentDrawer } from '@/components/ui/ConsignmentDrawer'
 import { ConsignmentModal } from '@/components/ui/ConsignmentModal'
+import { MissingInfoTag, MissingValue } from '@/components/ui/MissingInfoTag'
+import { CarDetailsModal, type CarDetailsTarget } from '@/components/ui/CarDetailsModal'
+import { describeMissingForCar } from '@/lib/missingInfo'
 import { UI_ICONS } from '@/components/layout/icons'
 import type { ConsignmentPayload, PurchaseBillLine } from '@/types'
 
@@ -30,6 +33,7 @@ export default function StockPage() {
   const [consigning, setConsigning] = useState<PurchaseBillLine | null>(null)
   const [unmarking, setUnmarking] = useState<PurchaseBillLine | null>(null)
   const [viewingConsignment, setViewingConsignment] = useState<PurchaseBillLine | null>(null)
+  const [editingCar, setEditingCar] = useState<CarDetailsTarget | null>(null)
 
   const lines = data ?? []
   const filtered = useMemo(() => {
@@ -80,11 +84,12 @@ export default function StockPage() {
             <span className="font-medium text-ink">{value}</span>
           )}
           {row.isConsignment && <ConsignmentTag details={row} onClick={() => setViewingConsignment(row)} />}
+          <MissingInfoTag items={describeMissingForCar(row, t)} />
         </div>
       ),
     },
-    { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber', render: (value: string) => <span className="ltr-code">{value}</span> },
-    { title: t('purchases.motorNumber'), dataIndex: 'motorNumber', responsive: ['lg'], render: (value: string) => <span className="ltr-code">{value}</span> },
+    { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber', render: (value: string) => (value ? <span className="ltr-code">{value}</span> : <MissingValue />) },
+    { title: t('purchases.motorNumber'), dataIndex: 'motorNumber', responsive: ['lg'], render: (value: string) => (value ? <span className="ltr-code">{value}</span> : <span className="text-subtle">—</span>) },
     { title: t('purchases.modelYear'), dataIndex: 'modelYear', responsive: ['lg'], render: (value: number | null) => value ?? '—' },
     { title: t('purchases.supplier'), dataIndex: 'supplierName' },
     { title: t('sales.buyingDate'), dataIndex: 'purchaseDate', render: (value: string) => <span className="whitespace-nowrap">{formatDate(value)}</span> },
@@ -108,6 +113,12 @@ export default function StockPage() {
           </ActionPill>
           <RowActions
             actions={[
+              {
+                key: 'details',
+                label: t('missingInfo.editDetails'),
+                icon: ACTION_ICONS.edit,
+                onClick: () => setEditingCar({ lineId: row.id, itemName: row.itemName, chassisNumber: row.chassisNumber, motorNumber: row.motorNumber, modelYear: row.modelYear }),
+              },
               {
                 key: 'consignment',
                 label: row.isConsignment ? t('consignment.edit') : t('consignment.mark'),
@@ -184,6 +195,8 @@ export default function StockPage() {
           )}
         </SectionCard>
       </div>
+
+      <CarDetailsModal car={editingCar} onClose={() => setEditingCar(null)} />
 
       <ConsignmentDrawer
         open={Boolean(viewingConsignment)}

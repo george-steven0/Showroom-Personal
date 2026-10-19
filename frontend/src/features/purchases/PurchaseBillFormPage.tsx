@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,8 @@ import { DateField, FormRow, TextAreaField } from '@/components/form/fields'
 import { EmptyState, PageHeader, SectionCard } from '@/components/ui/primitives'
 import { Money } from '@/components/ui/Money'
 import { UI_ICONS } from '@/components/layout/icons'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { describeMissingForBill } from '@/lib/missingInfo'
 import { PurchaseLineRow } from './PurchaseLineRow'
 
 const EMPTY_LINE: PurchaseBillFormValues['lines'][number] = {
@@ -75,6 +77,7 @@ export default function PurchaseBillFormPage() {
       notes: existing.notes ?? '',
       lines: existing.lines.map((line) => ({
         key: localId(),
+        lineId: line.id,
         itemName: line.itemName,
         description: line.description ?? '',
         supplierId: line.supplierId,
@@ -129,36 +132,49 @@ export default function PurchaseBillFormPage() {
   const totalPaid = round2((lines ?? []).reduce((sum, line) => sum + (Number(line.paidAmount) || 0), 0))
   const totalOwed = round2(total - totalPaid)
 
+  // Missing car details don't block saving — the user confirms once, and the bill is tagged "Missing info".
+  const [pendingSave, setPendingSave] = useState<{ values: PurchaseBillFormValues; missing: string[] } | null>(null)
+
+  const save = async (values: PurchaseBillFormValues) => {
+    const payload = {
+      date: values.date,
+      notes: values.notes || undefined,
+      lines: values.lines.map((line) => ({
+        ...(isEdit && line.lineId ? { id: line.lineId } : {}),
+        itemName: line.itemName,
+        description: line.description || undefined,
+        supplierId: line.supplierId,
+        chassisNumber: line.chassisNumber,
+        motorNumber: line.motorNumber,
+        modelYear: line.modelYear ?? undefined,
+        price: line.price,
+        paidAmount: line.paidAmount,
+        notes: line.notes || undefined,
+      })),
+    }
+
+    try {
+      if (isEdit && id) {
+        await updateBill({ id, body: payload }).unwrap()
+        notify.success(t('messages.purchaseUpdated'))
+      } else {
+        await createBill(payload).unwrap()
+        notify.success(t('messages.purchaseSaved'))
+      }
+      navigate('/buying-bills')
+    } catch (error) {
+      notify.apiError(error)
+    }
+  }
+
   const onSubmit = form.handleSubmit(
     async (values) => {
-      const payload = {
-        date: values.date,
-        notes: values.notes || undefined,
-        lines: values.lines.map((line) => ({
-          itemName: line.itemName,
-          description: line.description || undefined,
-          supplierId: line.supplierId,
-          chassisNumber: line.chassisNumber,
-          motorNumber: line.motorNumber,
-          modelYear: line.modelYear ?? undefined,
-          price: line.price,
-          paidAmount: line.paidAmount,
-          notes: line.notes || undefined,
-        })),
+      const missing = describeMissingForBill(values.lines, t)
+      if (missing.length > 0) {
+        setPendingSave({ values, missing })
+        return
       }
-
-      try {
-        if (isEdit && id) {
-          await updateBill({ id, body: payload }).unwrap()
-          notify.success(t('messages.purchaseUpdated'))
-        } else {
-          await createBill(payload).unwrap()
-          notify.success(t('messages.purchaseSaved'))
-        }
-        navigate('/buying-bills')
-      } catch (error) {
-        notify.apiError(error)
-      }
+      await save(values)
     },
     () => notify.error(t('common.error'), t('messages.saveFailed')),
   )
@@ -170,6 +186,30 @@ export default function PurchaseBillFormPage() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
+      <ConfirmModal
+        open={Boolean(pendingSave)}
+        loading={saving}
+        danger={false}
+        title={t('missingInfo.confirmTitle')}
+        description={
+          <>
+            <p>{t('missingInfo.confirmBody')}</p>
+            <ul className="mt-2 list-disc ps-5 text-ink">
+              {(pendingSave?.missing ?? []).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </>
+        }
+        confirmLabel={t('missingInfo.saveAnyway')}
+        cancelLabel={t('missingInfo.goBack')}
+        onConfirm={async () => {
+          if (!pendingSave) return
+          await save(pendingSave.values)
+          setPendingSave(null)
+        }}
+        onCancel={() => setPendingSave(null)}
+      />
       <PageHeader
         title={isEdit ? t('purchases.edit') : t('purchases.add')}
         subtitle={existing?.number}

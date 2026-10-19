@@ -17,6 +17,9 @@ import { PageHeader } from '@/components/ui/primitives'
 import { BillStatusTag, PurchaseLineStatusTag } from '@/components/ui/StatusTags'
 import { ACTION_ICONS, RowActions } from '@/components/ui/RowActions'
 import { CloneButton } from '@/components/ui/CloneButton'
+import { MissingInfoTag, MissingValue } from '@/components/ui/MissingInfoTag'
+import { CarDetailsModal, type CarDetailsTarget } from '@/components/ui/CarDetailsModal'
+import { describeMissingForBill } from '@/lib/missingInfo'
 import { UI_ICONS } from '@/components/layout/icons'
 import { usePrintable, PrintButton } from '@/components/print/PrintDocument'
 import type { PurchaseBill } from '@/types'
@@ -70,7 +73,10 @@ export default function PurchaseBillsPage() {
   })
   const [cancelBill, { isLoading: cancelling }] = useCancelPurchaseBillMutation()
 
-  const [viewing, setViewing] = useState<PurchaseBill | null>(null)
+  const [viewingSnapshot, setViewing] = useState<PurchaseBill | null>(null)
+  // Follow the freshest copy, so the drawer reflects details edited while it's open.
+  const viewing = viewingSnapshot ? (data?.rows.find((row) => row.id === viewingSnapshot.id) ?? viewingSnapshot) : null
+  const [editingCar, setEditingCar] = useState<CarDetailsTarget | null>(null)
   const [target, setTarget] = useState<PurchaseBill | null>(null)
   const { ref: printRef, print } = usePrintable(viewing?.number ?? 'buying-bill')
 
@@ -98,6 +104,7 @@ export default function PurchaseBillsPage() {
             {value}
           </button>
           <BillPaymentTag bill={row} />
+          <MissingInfoTag items={describeMissingForBill(row.lines, t)} />
         </div>
       ),
     },
@@ -229,13 +236,33 @@ export default function PurchaseBillsPage() {
               columns={[
                 { title: t('purchases.itemName'), dataIndex: 'itemName' },
                 { title: t('purchases.supplier'), dataIndex: 'supplierName' },
-                { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber', render: (value: string) => <span className="ltr-code">{value}</span> },
-                { title: t('purchases.motorNumber'), dataIndex: 'motorNumber', render: (value: string) => <span className="ltr-code">{value}</span> },
+                { title: t('purchases.chassisNumber'), dataIndex: 'chassisNumber', render: (value: string) => (value ? <span className="ltr-code">{value}</span> : <MissingValue />) },
+                { title: t('purchases.motorNumber'), dataIndex: 'motorNumber', render: (value: string) => (value ? <span className="ltr-code">{value}</span> : <span className="text-subtle">—</span>) },
                 { title: t('purchases.modelYear'), dataIndex: 'modelYear', render: (value: number | null) => value ?? '—' },
                 { title: t('purchases.price'), dataIndex: 'price', align: 'right', render: (value: number) => <Money value={value} /> },
                 { title: t('purchases.paidAmount'), dataIndex: 'paidAmount', align: 'right', render: (value: number) => <Money value={value} /> },
                 { title: t('purchases.owed'), dataIndex: 'owed', align: 'right', render: (value: number) => <Money value={value} signed strong /> },
                 { title: t('common.status'), dataIndex: 'status', render: (value) => <PurchaseLineStatusTag status={value} /> },
+                {
+                  key: 'details',
+                  align: 'right',
+                  width: 48,
+                  fixed: 'right',
+                  render: (_, line) =>
+                    viewing.status === 'active' && (
+                      <Tooltip title={t('missingInfo.editDetails')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          aria-label={t('missingInfo.editDetails')}
+                          icon={ACTION_ICONS.edit}
+                          onClick={() =>
+                            setEditingCar({ lineId: line.id, itemName: line.itemName, chassisNumber: line.chassisNumber, motorNumber: line.motorNumber, modelYear: line.modelYear })
+                          }
+                        />
+                      </Tooltip>
+                    ),
+                },
               ]}
               summary={() => (
                 <Table.Summary>
@@ -246,7 +273,7 @@ export default function PurchaseBillsPage() {
                     <Table.Summary.Cell index={1} align="right">
                       <Money value={viewing.total} strong />
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} colSpan={2} />
+                    <Table.Summary.Cell index={2} colSpan={4} />
                   </Table.Summary.Row>
                 </Table.Summary>
               )}
@@ -256,6 +283,8 @@ export default function PurchaseBillsPage() {
       </Drawer>
 
       <div className="hidden">{viewing && <PurchaseBillPrint ref={printRef} bill={viewing} />}</div>
+
+      <CarDetailsModal car={editingCar} onClose={() => setEditingCar(null)} />
 
       <ConfirmModal
         open={Boolean(target)}
