@@ -129,14 +129,45 @@ export class PurchaseBillsService {
     })
   }
 
-  /** Full replace of a bill's lines — only while every line is still unsold, see the guard below. */
+  /**
+   * Edits a bill in place — only while every car is still in stock (see `assertEditable`). Cars keep their
+   * ids, so whatever hangs off them survives: the consignment marker, and an earlier sale that was cancelled
+   * (deleting and recreating the cars used to fail on that link). Each form row is matched to its car by the
+   * id it sends; a row without one falls back to a matching non-blank chassis number, otherwise it's a new car.
+   *
+   * A car's payment entry in the ledger is redone only if something it records changed (paid amount, date,
+   * supplier, item name) — offset, then written again — so re-saving an unchanged bill adds no noise.
+   */
   async update(id: string, dto: UpdatePurchaseBillDto, user: RequestUser) {
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.purchaseBill.findUnique({ where: { id }, include: { lines: true } })
+      const existing = await tx.purchaseBill.findUnique({
+        where: { id },
+        include: { lines: { include: { sellingBills: { select: { id: true } } } } },
+      })
       if (!existing) throw new NotFoundException('Buying bill not found')
       this.assertEditable(existing)
-      const existingIds = new Set(existing.lines.map((line) => line.id))
-      if (dto.lines.some((line) => line.id && !existingIds.has(line.id))) throw new BadRequestException('A car in this bill does not belong to it')
+
+      const existingById = new Map(existing.lines.map((line) => [line.id, line]))
+      const sentIds = dto.lines.flatMap((line) => (line.id ? [line.id] : []))
+      if (sentIds.some((lineId) => !existingById.has(lineId))) throw new BadRequestException('A car in this bill does not belong to it')
+      if (new Set(sentIds).size !== sentIds.length) throw new BadRequestException('The same car appears twice in this bill')
+
+      const claimed = new Set(sentIds)
+      const rows = dto.lines.map((input) => {
+        if (input.id) return { input, current: existingById.get(input.id) }
+        const chassis = cleanNumber(input.chassisNumber).toLowerCase()
+        const current = chassis ? existing.lines.find((line) => !claimed.has(line.id) && line.chassisNumber.trim().toLowerCase() === chassis) : undefined
+        if (current) claimed.add(current.id)
+        return { input, current }
+      })
+      const removed = existing.lines.filter((line) => !claimed.has(line.id))
+      const removedWithHistory = removed.find((line) => line.sellingBills.length > 0)
+      if (removedWithHistory) {
+        throw new BadRequestException(
+          `"${removedWithHistory.itemName}" has an earlier (cancelled) sale on record, so it can't be removed from this bill. You can still edit it, or cancel the whole bill.`,
+        )
+      }
+
       this.assertNoDuplicateWithinLines(dto.lines)
       await this.assertUniqueAgainstOtherBills(tx, dto.lines, { excludeBillId: id })
 
@@ -146,67 +177,11 @@ export class PurchaseBillsService {
       const supplierById = new Map(suppliers.map((s) => [s.id, s]))
 
       const date = new Date(dto.date)
-      // Lines are replaced wholesale below, so carry the consignment marker and its details over — by the
-      // line's own id when the form sent it, otherwise by (non-blank) chassis number.
-      const consignmentEntries = existing.lines
-        .filter((line) => line.isConsignment)
-        .map((line) => [
-          line,
-          {
-              isConsignment: true,
-              consignmentTraderName: line.consignmentTraderName,
-              consignmentDate: line.consignmentDate,
-              consignmentAddress: line.consignmentAddress,
-              consignmentPaidAmount: line.consignmentPaidAmount,
-            consignmentNotes: line.consignmentNotes,
-          },
-        ] as const)
-      const consignmentById = new Map(consignmentEntries.map(([line, data]) => [line.id, data]))
-      const consignmentByChassis = new Map(
-        consignmentEntries.filter(([line]) => line.chassisNumber.trim() !== '').map(([line, data]) => [line.chassisNumber.trim().toLowerCase(), data]),
-      )
-      const carriedConsignment = (line: { id?: string; chassisNumber?: string }) => {
-        if (line.id) return consignmentById.get(line.id)
-        const chassis = cleanNumber(line.chassisNumber)
-        return chassis ? consignmentByChassis.get(chassis.toLowerCase()) : undefined
-      }
-      for (const line of existing.lines) {
-        await this.ledger.reverseEntriesForReference(tx, line.id, { date, createdBy: user.id, createdByName: user.fullName })
-      }
-      await tx.purchaseBillLine.deleteMany({ where: { purchaseBillId: id } })
-
-      const subtotal = round2(dto.lines.reduce((sum, line) => sum + line.price, 0))
-
-      const bill = await tx.purchaseBill.update({
-        where: { id },
-        data: {
-          date,
-          notes: dto.notes,
-          subtotal,
-          total: subtotal,
-          updatedAt: new Date(),
-          updatedBy: user.id,
-          updatedByName: user.fullName,
-          lines: {
-            create: dto.lines.map((line) => ({
-              itemName: line.itemName,
-              description: line.description,
-              supplierId: line.supplierId,
-              chassisNumber: cleanNumber(line.chassisNumber),
-              motorNumber: cleanNumber(line.motorNumber),
-              modelYear: line.modelYear,
-              price: line.price,
-              paidAmount: line.paidAmount,
-              notes: line.notes,
-              ...carriedConsignment(line),
-            })),
-          },
-        },
-        include: { lines: { include: { supplier: true } } },
-      })
-
-      for (const line of bill.lines) {
-        await this.ledger.writeEntry(tx, {
+      const now = new Date()
+      const audit = { createdBy: user.id, createdByName: user.fullName }
+      const dateChanged = existing.date.getTime() !== date.getTime()
+      const recordPayment = (line: { id: string; itemName: string; supplierId: string; paidAmount: number }) =>
+        this.ledger.writeEntry(tx, {
           type: 'purchase_payment',
           direction: 'debit',
           amount: line.paidAmount,
@@ -216,11 +191,57 @@ export class PurchaseBillsService {
           counterpartyName: supplierById.get(line.supplierId)?.name,
           referenceType: 'purchase_bill_line',
           referenceId: line.id,
-          createdBy: user.id,
-          createdByName: user.fullName,
+          ...audit,
         })
+
+      for (const line of removed) {
+        await this.ledger.reverseEntriesForReference(tx, line.id, { date, ...audit })
+        await tx.purchaseBillLine.delete({ where: { id: line.id } })
       }
 
+      const subtotal = round2(dto.lines.reduce((sum, line) => sum + line.price, 0))
+      await tx.purchaseBill.update({
+        where: { id },
+        data: { date, notes: dto.notes ?? null, subtotal, total: subtotal, updatedAt: now, updatedBy: user.id, updatedByName: user.fullName },
+      })
+
+      for (const { input, current } of rows) {
+        // Explicit nulls: on an update, `undefined` would mean "leave the old value", so a cleared field would stick.
+        const data = {
+          itemName: input.itemName,
+          description: input.description ?? null,
+          supplierId: input.supplierId,
+          chassisNumber: cleanNumber(input.chassisNumber),
+          motorNumber: cleanNumber(input.motorNumber),
+          modelYear: input.modelYear ?? null,
+          price: input.price,
+          paidAmount: input.paidAmount,
+          notes: input.notes ?? null,
+        }
+
+        if (!current) {
+          const created = await tx.purchaseBillLine.create({ data: { ...data, purchaseBillId: id } })
+          await recordPayment(created)
+          continue
+        }
+
+        await tx.purchaseBillLine.update({ where: { id: current.id }, data })
+        const paymentChanged = current.paidAmount !== data.paidAmount || current.supplierId !== data.supplierId || current.itemName !== data.itemName || dateChanged
+        if (paymentChanged) {
+          await this.ledger.reverseEntriesForReference(tx, current.id, { date, ...audit })
+          await recordPayment({ id: current.id, ...data })
+        }
+        // An earlier (cancelled) sale keeps a copy of the car's identity — keep it in step, as "Edit car details" does.
+        const identityChanged = current.chassisNumber !== data.chassisNumber || current.motorNumber !== data.motorNumber || current.modelYear !== data.modelYear
+        if (identityChanged && current.sellingBills.length > 0) {
+          await tx.sellingBill.updateMany({
+            where: { purchaseLineId: current.id },
+            data: { chassisNumber: data.chassisNumber, motorNumber: data.motorNumber, modelYear: data.modelYear, updatedAt: now, updatedBy: user.id, updatedByName: user.fullName },
+          })
+        }
+      }
+
+      const bill = await tx.purchaseBill.findUniqueOrThrow({ where: { id }, include: { lines: { include: { supplier: true } } } })
       return this.mapBill(bill)
     })
   }

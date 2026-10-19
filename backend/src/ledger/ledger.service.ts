@@ -25,6 +25,8 @@ export interface LedgerEntryInput {
  * independently, so the two views of "money in this business" can never
  * drift apart.
  */
+const REVERSAL_PREFIX = 'Reversal — '
+
 @Injectable()
 export class LedgerService {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,29 +38,39 @@ export class LedgerService {
   }
 
   /**
-   * Reverses every ledger entry tied to a reference (a cancelled bill, a
-   * cancelled sale) by writing offsetting entries with the opposite
-   * direction — never mutates or deletes the originals, so the ledger
-   * stays an append-only audit trail.
+   * Cancels out what's recorded against a reference (a cancelled bill or sale, or an edit about to be
+   * re-recorded) with one offsetting entry per transaction type for whatever is still outstanding. The
+   * originals are never mutated or deleted, so the ledger stays an append-only audit trail.
+   *
+   * It offsets the *net* rather than mirroring every row: a record edited more than once already carries
+   * earlier reversals, and mirroring would reverse those too — the same cash result, but the journal would
+   * double on every edit. A reference that's already balanced writes nothing.
    */
   async reverseEntriesForReference(
     tx: Prisma.TransactionClient,
     referenceId: string,
     opts: { date: Date; createdBy: string; createdByName: string },
   ) {
-    const entries = await tx.cashTransaction.findMany({ where: { referenceId } })
-    for (const entry of entries) {
+    const entries = await tx.cashTransaction.findMany({ where: { referenceId }, orderBy: { createdAt: 'asc' } })
+    const byType = new Map<string, typeof entries>()
+    for (const entry of entries) byType.set(entry.type, [...(byType.get(entry.type) ?? []), entry])
+
+    for (const [type, rows] of byType) {
+      const net = round2(rows.reduce((sum, entry) => sum + (entry.direction === 'credit' ? entry.amount : -entry.amount), 0))
+      if (net === 0) continue
+      // Describe the offset after the latest original entry, not after an earlier reversal.
+      const source = [...rows].reverse().find((entry) => !entry.description.startsWith(REVERSAL_PREFIX)) ?? rows[rows.length - 1]
       await tx.cashTransaction.create({
         data: {
-          type: entry.type,
-          direction: entry.direction === 'credit' ? 'debit' : 'credit',
-          amount: entry.amount,
+          type,
+          direction: net > 0 ? 'debit' : 'credit',
+          amount: Math.abs(net),
           date: opts.date,
-          description: `Reversal — ${entry.description}`,
-          itemName: entry.itemName,
-          counterpartyName: entry.counterpartyName,
-          referenceType: entry.referenceType,
-          referenceId: entry.referenceId,
+          description: `${REVERSAL_PREFIX}${source.description}`,
+          itemName: source.itemName,
+          counterpartyName: source.counterpartyName,
+          referenceType: source.referenceType,
+          referenceId,
           createdBy: opts.createdBy,
           createdByName: opts.createdByName,
         },
