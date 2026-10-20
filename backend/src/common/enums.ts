@@ -9,3 +9,6 @@ export type CashTransactionType = (typeof CASH_TRANSACTION_TYPES)[number]
 
 export const CASH_DIRECTIONS = ['credit', 'debit'] as const
 export type CashDirection = (typeof CASH_DIRECTIONS)[number]
+
+export const INTERNAL_ENTRY_TYPES = ['paid', 'owed'] as const
+export type InternalEntryType = (typeof INTERNAL_ENTRY_TYPES)[number]

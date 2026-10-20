@@ -135,6 +135,27 @@ export interface Expense extends AuditFields {
   note: string | null
 }
 
+export type InternalEntryType = 'paid' | 'owed'
+
+/** An internal-accounts line — the owner's side calculations, never part of the business books. */
+export interface InternalAccountEntry extends AuditFields {
+  id: string
+  itemName: string
+  amount: number
+  type: InternalEntryType
+  date: string
+  notes: string | null
+}
+
+export interface InternalAccountsSummary {
+  paid: number
+  owed: number
+  /** owed − paid */
+  net: number
+  paidCount: number
+  owedCount: number
+}
+
 export type CashTransactionType =
   | 'capital_injection'
   | 'purchase_payment'

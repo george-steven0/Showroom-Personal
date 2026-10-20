@@ -9,6 +9,7 @@ import { SuppliersModule } from './suppliers/suppliers.module'
 import { PurchaseBillsModule } from './purchase-bills/purchase-bills.module'
 import { SellingBillsModule } from './selling-bills/selling-bills.module'
 import { ExpensesModule } from './expenses/expenses.module'
+import { InternalAccountsModule } from './internal-accounts/internal-accounts.module'
 import { CapitalModule } from './capital/capital.module'
 import { AccountsModule } from './accounts/accounts.module'
 import { DashboardModule } from './dashboard/dashboard.module'
@@ -43,6 +44,7 @@ import { FollowUpModule } from './follow-up/follow-up.module'
     PurchaseBillsModule,
     SellingBillsModule,
     ExpensesModule,
+    InternalAccountsModule,
     CapitalModule,
     AccountsModule,
     DashboardModule,

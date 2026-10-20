@@ -22,6 +22,7 @@
     "sellingBills": "Selling Bills",
     "stock": "Stock",
     "accounts": "Accounts",
+    "internalAccounts": "Internal Accounts",
     "summary": "Summary",
     "inventory": "Inventory",
     "followUp": "Follow Up",
@@ -112,7 +113,10 @@
     "inventorySaleUpdated": "Sale updated",
     "followUpClientSaved": "Client added",
     "followUpClientUpdated": "Client updated",
-    "followUpClientDeleted": "Client deleted"
+    "followUpClientDeleted": "Client deleted",
+    "internalEntrySaved": "Entry added",
+    "internalEntryUpdated": "Entry updated",
+    "internalEntryDeleted": "Entry deleted"
   },
   "suppliers": {
     "title": "Suppliers",
@@ -329,6 +333,27 @@
     "advancesHint": "Cars you paid more for than their price. The extra is still your money, held by the supplier — it isn't a cost, isn't stock, and doesn't count as profit or loss.",
     "emptyExpenses": "No expenses recorded for this period.",
     "emptyExpensesHint": "Add an expense to track money spent outside of buying cars."
+  },
+  "internalAccounts": {
+    "title": "Internal Accounts",
+    "subtitle": "Your own side calculations — these entries don't affect the main accounts.",
+    "add": "Add entry",
+    "addTitle": "Add entry",
+    "editTitle": "Edit entry",
+    "itemName": "Item name",
+    "type": "Type",
+    "typePlaceholder": "Paid or owed",
+    "typeRequired": "Choose paid or owed",
+    "paid": "Paid",
+    "owed": "Owed",
+    "net": "Net",
+    "netHint": "Owed − paid",
+    "entriesCount": "{{count}} entry(ies) in this filter",
+    "searchPlaceholder": "Item name · notes",
+    "empty": "No entries yet",
+    "emptyHint": "Add what was paid and what's owed to keep a running total.",
+    "deleteTitle": "Delete entry?",
+    "deleteBody": "\"{{name}}\" ({{amount}}) will be removed. This only affects this page."
   },
   "summary": {
     "title": "Summary",

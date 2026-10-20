@@ -17,6 +17,7 @@ export const TAGS = [
   'InventoryBranch',
   'InventoryItem',
   'FollowUpClient',
+  'InternalAccount',
 ] as const
 
 const rawBaseQuery = fetchBaseQuery({

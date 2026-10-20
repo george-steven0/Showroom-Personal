@@ -22,6 +22,7 @@
     "sellingBills": "فواتير البيع",
     "stock": "المخزون",
     "accounts": "الحسابات",
+    "internalAccounts": "الحسابات الداخلية",
     "summary": "الملخص",
     "inventory": "الجرد",
     "followUp": "المتابعة",
@@ -112,7 +113,10 @@
     "inventorySaleUpdated": "تم تحديث عملية البيع",
     "followUpClientSaved": "تمت إضافة العميل",
     "followUpClientUpdated": "تم تحديث بيانات العميل",
-    "followUpClientDeleted": "تم حذف العميل"
+    "followUpClientDeleted": "تم حذف العميل",
+    "internalEntrySaved": "تمت إضافة القيد",
+    "internalEntryUpdated": "تم تحديث القيد",
+    "internalEntryDeleted": "تم حذف القيد"
   },
   "suppliers": {
     "title": "الموردون",
@@ -329,6 +333,27 @@
     "emptyOwed": "لا توجد مبالغ مستحقة لأي مورد حالياً.",
     "emptyExpenses": "لا توجد مصروفات مسجلة لهذه الفترة.",
     "emptyExpensesHint": "أضف مصروفاً لتتبع الأموال المصروفة خارج شراء السيارات."
+  },
+  "internalAccounts": {
+    "title": "الحسابات الداخلية",
+    "subtitle": "حساباتك الجانبية الخاصة — هذه القيود لا تؤثر على الحسابات الرئيسية.",
+    "add": "إضافة قيد",
+    "addTitle": "إضافة قيد",
+    "editTitle": "تعديل القيد",
+    "itemName": "اسم البند",
+    "type": "النوع",
+    "typePlaceholder": "مدفوع أو مستحق",
+    "typeRequired": "اختر مدفوع أو مستحق",
+    "paid": "مدفوع",
+    "owed": "مستحق",
+    "net": "الصافي",
+    "netHint": "المستحق − المدفوع",
+    "entriesCount": "{{count}} قيد ضمن هذا الفلتر",
+    "searchPlaceholder": "اسم البند · الملاحظات",
+    "empty": "لا توجد قيود بعد",
+    "emptyHint": "أضف ما تم دفعه وما هو مستحق لمتابعة الإجمالي.",
+    "deleteTitle": "حذف القيد؟",
+    "deleteBody": "سيتم حذف \"{{name}}\" ({{amount}}). هذا يؤثر على هذه الصفحة فقط."
   },
   "summary": {
     "title": "الملخص",

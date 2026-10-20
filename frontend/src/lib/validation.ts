@@ -102,6 +102,16 @@ export function expenseSchema(t: TFunction) {
   })
 }
 
+export function internalEntrySchema(t: TFunction) {
+  return z.object({
+    itemName: z.string().trim().min(1, t('validation.required')),
+    amount: z.number({ message: t('validation.amountPositive') }).positive(t('validation.amountPositive')),
+    type: z.enum(['paid', 'owed'], { message: t('internalAccounts.typeRequired') }),
+    date: z.string().min(1, t('validation.required')),
+    notes: z.string().trim().optional(),
+  })
+}
+
 export function capitalInjectionSchema(t: TFunction) {
   return z.object({
     amount: z.number({ message: t('validation.amountPositive') }).positive(t('validation.amountPositive')),
@@ -220,6 +230,7 @@ export type LineDetailsFormValues = z.infer<ReturnType<typeof lineDetailsSchema>
 export type PurchaseBillFormValues = z.infer<ReturnType<typeof purchaseBillSchema>>
 export type SellingBillFormValues = z.infer<ReturnType<typeof sellingBillSchema>>
 export type ExpenseFormValues = z.infer<ReturnType<typeof expenseSchema>>
+export type InternalEntryFormValues = z.infer<ReturnType<typeof internalEntrySchema>>
 export type CapitalInjectionFormValues = z.infer<ReturnType<typeof capitalInjectionSchema>>
 export type RecordPaymentFormValues = z.infer<ReturnType<typeof recordPaymentSchema>>
 export type SettingsFormValues = z.infer<ReturnType<typeof settingsSchema>>

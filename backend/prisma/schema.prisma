@@ -215,6 +215,30 @@ model Expense {
   @@map("expenses")
 }
 
+/// Internal accounts — the owner's own side calculations (what was paid out
+/// vs what's owed). Deliberately separate from the business books: nothing
+/// here writes to the cash ledger or feeds capital, profit or the dashboard.
+model InternalAccountEntry {
+  id       String   @id @default(cuid())
+  itemName String
+  amount   Float
+  /// 'paid' | 'owed' — net = owed − paid
+  type     String
+  date     DateTime
+  notes    String?
+
+  createdAt     DateTime  @default(now())
+  createdBy     String
+  createdByName String
+  updatedAt     DateTime?
+  updatedBy     String?
+  updatedByName String?
+
+  @@index([date])
+  @@index([type])
+  @@map("internal_account_entries")
+}
+
 /// The cash ledger — every entry is one atomic cash movement. Capital
 /// balance is `sum(credit) - sum(debit)` over this table, computed on
 /// read rather than cached, since this app's data volume never justifies
