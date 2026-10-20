@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_CURRENCY } from '@/lib/constants'
 import { FormRow, NumberField, SelectField, TextAreaField, TextField } from '@/components/form/fields'
 import { ACTION_ICONS } from '@/components/ui/RowActions'
+import { PurchaseLineStatusTag } from '@/components/ui/StatusTags'
 import type { PurchaseBillFormValues } from '@/lib/validation'
 
 const CURRENT_YEAR = new Date().getFullYear() + 1
@@ -17,6 +18,7 @@ export function PurchaseLineRow({
   supplierOptions,
   onRemove,
   canRemove,
+  sold = false,
 }: {
   index: number
   control: Control<PurchaseBillFormValues>
@@ -25,6 +27,8 @@ export function PurchaseLineRow({
   supplierOptions: { value: string; label: string }[]
   onRemove: () => void
   canRemove: boolean
+  /** Already sold: still editable, but it can't leave the bill (its sale points at it). */
+  sold?: boolean
 }) {
   const { t } = useTranslation()
 
@@ -59,10 +63,11 @@ export function PurchaseLineRow({
   return (
     <div className="rounded-lg border border-line p-4">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-ink">
+        <span className="flex items-center gap-2 text-sm font-semibold text-ink">
           {t('purchases.items')} #{index + 1}
+          {sold && <PurchaseLineStatusTag status="sold" />}
         </span>
-        {canRemove && (
+        {canRemove && !sold && (
           <Button type="text" danger size="small" icon={ACTION_ICONS.delete} onClick={onRemove}>
             {t('purchases.removeRow')}
           </Button>

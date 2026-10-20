@@ -128,6 +128,8 @@ export default function PurchaseBillFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloneId])
 
+  const soldLineIds = useMemo(() => new Set((existing?.lines ?? []).filter((line) => line.status === 'sold').map((line) => line.id)), [existing])
+
   const total = round2((lines ?? []).reduce((sum, line) => sum + (Number(line.price) || 0), 0))
   const totalPaid = round2((lines ?? []).reduce((sum, line) => sum + (Number(line.paidAmount) || 0), 0))
   const totalOwed = round2(total - totalPaid)
@@ -228,6 +230,7 @@ export default function PurchaseBillFormPage() {
       <div className="space-y-4">
         {cloneUnavailable && <Alert type="warning" showIcon title={t('purchases.cloneFailed')} />}
         {cloneId && cloneSource && cloneSource.id === cloneId && !cloneUnavailable && <Alert type="info" showIcon title={t('purchases.cloneNotice', { number: cloneSource.number })} />}
+        {isEdit && soldLineIds.size > 0 && <Alert type="info" showIcon title={t('purchases.soldEditNotice')} />}
 
         <SectionCard title={t('purchases.view')}>
           <FormRow cols={3}>
@@ -265,6 +268,7 @@ export default function PurchaseBillFormPage() {
                   supplierOptions={supplierOptions}
                   onRemove={() => remove(index)}
                   canRemove={fields.length > 1}
+                  sold={soldLineIds.has(lines?.[index]?.lineId ?? '')}
                 />
               ))}
             </div>

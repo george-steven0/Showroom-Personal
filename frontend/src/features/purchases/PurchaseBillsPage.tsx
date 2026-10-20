@@ -91,7 +91,8 @@ export default function PurchaseBillsPage() {
     }
   }
 
-  const canEditOrCancel = (row: PurchaseBill) => row.status === 'active' && row.lines.every((line) => line.status === 'in_stock')
+  // Any active bill can be corrected, sold cars included; cancelling needs every car still in stock.
+  const canCancel = (row: PurchaseBill) => row.status === 'active' && row.lines.every((line) => line.status === 'in_stock')
 
   const columns: ColumnsType<PurchaseBill> = [
     {
@@ -140,7 +141,7 @@ export default function PurchaseBillsPage() {
                 key: 'edit',
                 label: t('common.edit'),
                 icon: ACTION_ICONS.edit,
-                hidden: !canEditOrCancel(row),
+                hidden: row.status !== 'active',
                 onClick: () => navigate(`/buying-bills/${row.id}/edit`),
               },
               {
@@ -149,7 +150,7 @@ export default function PurchaseBillsPage() {
                 icon: ACTION_ICONS.delete,
                 danger: true,
                 hidden: row.status === 'cancelled',
-                disabled: !canEditOrCancel(row),
+                disabled: !canCancel(row),
                 onClick: () => setTarget(row),
               },
             ]}

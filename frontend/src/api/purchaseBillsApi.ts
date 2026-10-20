@@ -40,10 +40,12 @@ export const purchaseBillsApi = baseApi.injectEndpoints({
     }),
     updatePurchaseBill: builder.mutation<PurchaseBill, { id: string; body: PurchaseBillPayload }>({
       query: ({ id, body }) => ({ url: `/purchase-bills/${id}`, method: 'PATCH', body }),
+      // A sold car's selling bill copies its price, supplier and date (and its profit follows), so those refresh too.
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'PurchaseBill', id },
         { type: 'PurchaseBill', id: 'LIST' },
         { type: 'PurchaseLine', id: 'LIST' },
+        'SellingBill',
         'Accounts',
         'Dashboard',
         'CashTransaction',

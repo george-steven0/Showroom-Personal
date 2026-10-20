@@ -130,22 +130,24 @@ export class PurchaseBillsService {
   }
 
   /**
-   * Edits a bill in place — only while every car is still in stock (see `assertEditable`). Cars keep their
-   * ids, so whatever hangs off them survives: the consignment marker, and an earlier sale that was cancelled
-   * (deleting and recreating the cars used to fail on that link). Each form row is matched to its car by the
-   * id it sends; a row without one falls back to a matching non-blank chassis number, otherwise it's a new car.
+   * Edits a bill in place — any active bill, even once its cars are sold, since entries get corrected after
+   * the fact. Cars keep their ids, so whatever hangs off them survives: the consignment marker and their sales.
+   * Each form row is matched to its car by the id it sends; a row without one falls back to a matching
+   * non-blank chassis number, otherwise it's a new car. A car with a sale on record can't be removed.
    *
    * A car's payment entry in the ledger is redone only if something it records changed (paid amount, date,
-   * supplier, item name) — offset, then written again — so re-saving an unchanged bill adds no noise.
+   * supplier, item name), so re-saving an unchanged bill adds no noise — see `rerecordPayment`. A sale keeps a
+   * copy of the car it sold (name, supplier, buying price and date, numbers), so those are kept in step and its
+   * profit recomputed from the corrected price.
    */
   async update(id: string, dto: UpdatePurchaseBillDto, user: RequestUser) {
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.purchaseBill.findUnique({
         where: { id },
-        include: { lines: { include: { sellingBills: { select: { id: true } } } } },
+        include: { lines: { include: { sellingBills: { select: { id: true, number: true, status: true, sellingPrice: true } } } } },
       })
       if (!existing) throw new NotFoundException('Buying bill not found')
-      this.assertEditable(existing)
+      if (existing.status !== 'active') throw new BadRequestException('This buying bill has already been cancelled')
 
       const existingById = new Map(existing.lines.map((line) => [line.id, line]))
       const sentIds = dto.lines.flatMap((line) => (line.id ? [line.id] : []))
@@ -163,8 +165,11 @@ export class PurchaseBillsService {
       const removed = existing.lines.filter((line) => !claimed.has(line.id))
       const removedWithHistory = removed.find((line) => line.sellingBills.length > 0)
       if (removedWithHistory) {
+        const activeSale = removedWithHistory.sellingBills.find((sale) => sale.status === 'active')
         throw new BadRequestException(
-          `"${removedWithHistory.itemName}" has an earlier (cancelled) sale on record, so it can't be removed from this bill. You can still edit it, or cancel the whole bill.`,
+          activeSale
+            ? `"${removedWithHistory.itemName}" is sold on ${activeSale.number}, so it can't be removed from this bill. Cancel that sale first if the car shouldn't be here, or edit it instead.`
+            : `"${removedWithHistory.itemName}" has an earlier (cancelled) sale on record, so it can't be removed from this bill. You can still edit it, or cancel the whole bill.`,
         )
       }
 
@@ -180,11 +185,11 @@ export class PurchaseBillsService {
       const now = new Date()
       const audit = { createdBy: user.id, createdByName: user.fullName }
       const dateChanged = existing.date.getTime() !== date.getTime()
-      const recordPayment = (line: { id: string; itemName: string; supplierId: string; paidAmount: number }) =>
+      const recordPayment = (line: { id: string; itemName: string; supplierId: string }, amount: number) =>
         this.ledger.writeEntry(tx, {
           type: 'purchase_payment',
           direction: 'debit',
-          amount: line.paidAmount,
+          amount,
           date,
           description: `Bought ${line.itemName} from ${supplierById.get(line.supplierId)?.name ?? ''}`,
           itemName: line.itemName,
@@ -194,8 +199,9 @@ export class PurchaseBillsService {
           ...audit,
         })
 
+      // A car taken off the bill was entered by mistake, so its payments are offset on the dates they were recorded.
       for (const line of removed) {
-        await this.ledger.reverseEntriesForReference(tx, line.id, { date, ...audit })
+        await this.ledger.reverseEntriesForReference(tx, line.id, { date: 'original', ...audit })
         await tx.purchaseBillLine.delete({ where: { id: line.id } })
       }
 
@@ -221,23 +227,43 @@ export class PurchaseBillsService {
 
         if (!current) {
           const created = await tx.purchaseBillLine.create({ data: { ...data, purchaseBillId: id } })
-          await recordPayment(created)
+          await recordPayment(created, created.paidAmount)
           continue
         }
 
         await tx.purchaseBillLine.update({ where: { id: current.id }, data })
         const paymentChanged = current.paidAmount !== data.paidAmount || current.supplierId !== data.supplierId || current.itemName !== data.itemName || dateChanged
-        if (paymentChanged) {
-          await this.ledger.reverseEntriesForReference(tx, current.id, { date, ...audit })
-          await recordPayment({ id: current.id, ...data })
-        }
-        // An earlier (cancelled) sale keeps a copy of the car's identity — keep it in step, as "Edit car details" does.
-        const identityChanged = current.chassisNumber !== data.chassisNumber || current.motorNumber !== data.motorNumber || current.modelYear !== data.modelYear
-        if (identityChanged && current.sellingBills.length > 0) {
-          await tx.sellingBill.updateMany({
-            where: { purchaseLineId: current.id },
-            data: { chassisNumber: data.chassisNumber, motorNumber: data.motorNumber, modelYear: data.modelYear, updatedAt: now, updatedBy: user.id, updatedByName: user.fullName },
-          })
+        if (paymentChanged) await this.rerecordPayment(tx, { id: current.id, ...data }, recordPayment, audit)
+
+        // Every sale of this car (the active one and any cancelled ones) carries a copy of it — keep them in step.
+        // Profit is selling minus buying price, so a corrected price moves the profit the Accounts page reports.
+        const snapshotChanged =
+          current.itemName !== data.itemName ||
+          current.supplierId !== data.supplierId ||
+          current.price !== data.price ||
+          dateChanged ||
+          current.chassisNumber !== data.chassisNumber ||
+          current.motorNumber !== data.motorNumber ||
+          current.modelYear !== data.modelYear
+        if (snapshotChanged) {
+          for (const sale of current.sellingBills) {
+            await tx.sellingBill.update({
+              where: { id: sale.id },
+              data: {
+                itemName: data.itemName,
+                supplierName: supplierById.get(data.supplierId)?.name ?? '',
+                buyingPrice: data.price,
+                buyingDate: date,
+                chassisNumber: data.chassisNumber,
+                motorNumber: data.motorNumber,
+                modelYear: data.modelYear,
+                profit: round2(sale.sellingPrice - data.price),
+                updatedAt: now,
+                updatedBy: user.id,
+                updatedByName: user.fullName,
+              },
+            })
+          }
         }
       }
 
@@ -250,7 +276,7 @@ export class PurchaseBillsService {
     return this.prisma.$transaction(async (tx) => {
       const bill = await tx.purchaseBill.findUnique({ where: { id }, include: { lines: true } })
       if (!bill) throw new NotFoundException('Buying bill not found')
-      this.assertEditable(bill)
+      this.assertCancellable(bill)
 
       const now = new Date()
       for (const line of bill.lines) {
@@ -424,10 +450,37 @@ export class PurchaseBillsService {
     }
   }
 
-  private assertEditable(bill: PurchaseBill & { lines: PurchaseBillLine[] }) {
+  /**
+   * Brings an edited car's ledger in line with its new paid amount. Payments made later from Accounts
+   * (`debt_settlement`) keep their own entries and dates; only the up-front `purchase_payment` is offset — on
+   * the dates it was recorded — and written again for the rest of the paid amount. If the paid amount was cut
+   * below what was settled later, those settlements can't all stand, so everything is offset and the full paid
+   * amount recorded as one payment on the bill date.
+   */
+  private async rerecordPayment(
+    tx: Prisma.TransactionClient,
+    line: { id: string; itemName: string; supplierId: string; paidAmount: number },
+    recordPayment: (line: { id: string; itemName: string; supplierId: string }, amount: number) => Promise<unknown>,
+    audit: { createdBy: string; createdByName: string },
+  ) {
+    const settlements = await tx.cashTransaction.findMany({ where: { referenceId: line.id, type: 'debt_settlement' }, select: { direction: true, amount: true } })
+    const settled = round2(settlements.reduce((sum, entry) => sum + (entry.direction === 'debit' ? entry.amount : -entry.amount), 0))
+    const upFront = round2(line.paidAmount - settled)
+
+    if (upFront >= 0) {
+      await this.ledger.reverseEntriesForReference(tx, line.id, { date: 'original', types: ['purchase_payment'], ...audit })
+      await recordPayment(line, upFront)
+    } else {
+      await this.ledger.reverseEntriesForReference(tx, line.id, { date: 'original', ...audit })
+      await recordPayment(line, line.paidAmount)
+    }
+  }
+
+  /** Cancelling voids every car on the bill, so it's refused once one is sold — that sale would point at a car never bought. */
+  private assertCancellable(bill: PurchaseBill & { lines: PurchaseBillLine[] }) {
     if (bill.status !== 'active') throw new BadRequestException('This buying bill has already been cancelled')
     if (bill.lines.some((line) => line.status !== 'in_stock')) {
-      throw new BadRequestException('This bill cannot be changed because at least one of its cars has already been sold')
+      throw new BadRequestException('This bill cannot be cancelled because at least one of its cars has already been sold')
     }
   }
 

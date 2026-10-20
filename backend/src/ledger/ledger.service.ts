@@ -45,27 +45,37 @@ export class LedgerService {
    * It offsets the *net* rather than mirroring every row: a record edited more than once already carries
    * earlier reversals, and mirroring would reverse those too — the same cash result, but the journal would
    * double on every edit. A reference that's already balanced writes nothing.
+   *
+   * `date: 'original'` is for correcting a mistake: each date's net is offset on that same date, so any date
+   * range adds up as if the wrong entry had never been made. A cancellation passes the day it happens instead.
+   * `types` limits the offset to those transaction types (the rest of the reference is left as it is).
    */
   async reverseEntriesForReference(
     tx: Prisma.TransactionClient,
     referenceId: string,
-    opts: { date: Date; createdBy: string; createdByName: string },
+    opts: { date: Date | 'original'; types?: CashTransactionType[]; createdBy: string; createdByName: string },
   ) {
-    const entries = await tx.cashTransaction.findMany({ where: { referenceId }, orderBy: { createdAt: 'asc' } })
-    const byType = new Map<string, typeof entries>()
-    for (const entry of entries) byType.set(entry.type, [...(byType.get(entry.type) ?? []), entry])
+    const entries = await tx.cashTransaction.findMany({
+      where: { referenceId, ...(opts.types ? { type: { in: opts.types } } : {}) },
+      orderBy: { createdAt: 'asc' },
+    })
+    const groups = new Map<string, typeof entries>()
+    for (const entry of entries) {
+      const key = opts.date === 'original' ? `${entry.type}|${entry.date.getTime()}` : entry.type
+      groups.set(key, [...(groups.get(key) ?? []), entry])
+    }
 
-    for (const [type, rows] of byType) {
+    for (const rows of groups.values()) {
       const net = round2(rows.reduce((sum, entry) => sum + (entry.direction === 'credit' ? entry.amount : -entry.amount), 0))
       if (net === 0) continue
       // Describe the offset after the latest original entry, not after an earlier reversal.
       const source = [...rows].reverse().find((entry) => !entry.description.startsWith(REVERSAL_PREFIX)) ?? rows[rows.length - 1]
       await tx.cashTransaction.create({
         data: {
-          type,
+          type: source.type,
           direction: net > 0 ? 'debit' : 'credit',
           amount: Math.abs(net),
-          date: opts.date,
+          date: opts.date === 'original' ? source.date : opts.date,
           description: `${REVERSAL_PREFIX}${source.description}`,
           itemName: source.itemName,
           counterpartyName: source.counterpartyName,

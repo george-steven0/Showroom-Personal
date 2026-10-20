@@ -76,7 +76,8 @@ export class ExpensesService {
       if (!existing) throw new NotFoundException('Expense not found')
 
       const now = new Date()
-      await this.ledger.reverseEntriesForReference(tx, id, { date: now, createdBy: user.id, createdByName: user.fullName })
+      // A correction: the old entry is offset on its own date, so date-filtered cash matches the profit figures.
+      await this.ledger.reverseEntriesForReference(tx, id, { date: 'original', createdBy: user.id, createdByName: user.fullName })
 
       const expense = await tx.expense.update({
         where: { id },
@@ -113,7 +114,8 @@ export class ExpensesService {
       const existing = await tx.expense.findUnique({ where: { id } })
       if (!existing) throw new NotFoundException('Expense not found')
 
-      await this.ledger.reverseEntriesForReference(tx, id, { date: new Date(), createdBy: user.id, createdByName: user.fullName })
+      // Deleted = never happened (profit drops it on every date), so its cash entry is offset on its own date too.
+      await this.ledger.reverseEntriesForReference(tx, id, { date: 'original', createdBy: user.id, createdByName: user.fullName })
       await tx.expense.delete({ where: { id } })
 
       return { success: true }

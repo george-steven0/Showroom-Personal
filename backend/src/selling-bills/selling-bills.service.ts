@@ -121,7 +121,8 @@ export class SellingBillsService {
       const sellingDate = new Date(dto.sellingDate)
       const profit = round2(dto.sellingPrice - bill.buyingPrice)
 
-      await this.ledger.reverseEntriesForReference(tx, bill.id, { date: now, createdBy: user.id, createdByName: user.fullName })
+      // A correction, not a refund: the old sale entry is offset on its own date, so date-filtered totals stay right.
+      await this.ledger.reverseEntriesForReference(tx, bill.id, { date: 'original', createdBy: user.id, createdByName: user.fullName })
 
       const updated = await tx.sellingBill.update({
         where: { id },
